@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import struct
 import numpy as np
 import json
