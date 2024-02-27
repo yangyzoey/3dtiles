@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8" />
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"
+    />
+    <title>Hello World!</title>
+    <script src="/Cesium-1.91/Build/Cesium/Cesium.js"></script>
+    <style>
+      @import url(/Cesium-1.91/Build/Cesium/Widgets/widgets.css);
+      html,
+      body,
+      #cesiumContainer {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="cesiumContainer"></div>
+    <script>
+
+        const viewer = new Cesium.Viewer("cesiumContainer");
+
+// Add a Cesium 3D Tileset or other objects to the scene as needed
+        let tileset = new Cesium.Cesium3DTileset({
+            url: '/tiles/tileset.json',
+            //shadows:false,
+            backFaceCulling : false // also show wrongly oriented faces
+        });
+
+        var scene = viewer.scene;
+
+        viewer.scene.primitives.add (
+            tileset
+        );
+
+        tileset.readyPromise.then(
+            function(tileset)
+            {
+                viewer.zoomTo(tileset, new Cesium.HeadingPitchRange(1.5, -0.4, tileset.boundingSphere.radius * 3.0));
+                // Override the default home button = reset to location of tileset instead of to world globe
+                viewer.homeButton.viewModel.command.beforeExecute.addEventListener(
+                    function (e) {
+                        e.cancel = true;
+                        viewer.zoomTo(tileset, new Cesium.HeadingPitchRange(1.5, -0.4, tileset.boundingSphere.radius * 3.0));
+                    }
+                );
+            }
+        )
+        .otherwise(function(error) { console.log(error); } );
+
+
+    </script>
+  </body>
+</html>
