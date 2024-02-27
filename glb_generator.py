@@ -1,7 +1,3 @@
-# question:
-# 1. indices must? Should be, otherwise positions should be triangle vertices
-
-
 import json
 import base64
 import struct
