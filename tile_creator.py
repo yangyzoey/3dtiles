@@ -11,7 +11,7 @@ with open('input.json', 'r') as file:
     data = json.load(file)
 
 # specfy the dataset theme 
-theme =  "test"    # "campus_lod1"  #"campus"   # "37en2"
+theme =  "test"    
 
 # Extract table names, cluster_numbers
 object_input = "object_{}".format(theme) #data[theme]['object_table']
