@@ -83,7 +83,7 @@ You can also add your dataset theme and change parameters in the input.json file
 
 
 ### Result
-![Alt text](https://github.com/zoeysunrise/3dtile/tree/test1/9-284-556.png)
+![Visualisation](https://github.com/zoeysunrise/3dtile/tree/test1/9-284-556.png)
 
 
 // Continue..
