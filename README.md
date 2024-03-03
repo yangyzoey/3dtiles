@@ -72,6 +72,9 @@ DROP TABLE test_epsg4978;
 ```
 
 ### 2. Create tile in the Postgres. Run the webservice and download the tile on Cesium.
+
+download Cesium-1.110.zip from https://github.com/CesiumGS/cesium/releases/tag/1.110 under path 3dtile/
+
 $ python tile_creator.py
 
 $ python server.py
@@ -82,9 +85,12 @@ Now connect with a webbrowser to the service running on your own laptop: http://
 You can also add your dataset theme and change parameters in the input.json file. Then specfy the dataset theme in tile_creator.py
 
 
-### Result
+## Result
 ![Visualisation](https://github.com/zoeysunrise/3dtile/tree/test1/9-284-556.png)
 
+
+## Based on:
+This prototype is based on https://github.com/bmmeijers/lis3d
 
 // Continue..
 

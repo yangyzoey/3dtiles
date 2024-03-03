@@ -14,61 +14,61 @@ def create_app():
     app = Flask(__name__)
 
 
-    # https: // github.com / CesiumGS / cesium / wiki / CesiumJS - Features - Checklist
-    @app.route("/Cesium-1.91/<path:name>")
-    def ui(name):
-        print("ui route")
-        return send_from_directory("Cesium-1.91", name, as_attachment=False)
-
-    @app.route("/")
-    def index():
-        print("Index route")
-        return send_file("static/index.html")
-
-
-    @app.route("/ui/")
-    def cesium_ui():
-        # print("cesium_ui route")
-        # return send_file("static/cesium_ui_server.html")
-        
-        print("cesium_ui route")
-
-        # Record the start time for this route
-        route_start_time = time.time()
-
-        # Perform the task for this route (e.g., sending a file)
-        file_sent = send_file("static/cesium_ui_server.html")
-
-        # Record the end time for this route
-        route_end_time = time.time()
-
-        # Calculate the execution time for this route
-        route_execution_time = route_end_time - route_start_time
-
-        print(f"Execution time for cesium_ui route: {route_execution_time} seconds")
-
-        return file_sent
-
-# -----------------------------------Cesium sandcastle start---------------------------------------------------------------------------
-    # @app.route("/Cesium-1.110/<path:name>")
+    # # https: // github.com / CesiumGS / cesium / wiki / CesiumJS - Features - Checklist
+    # @app.route("/Cesium-1.91/<path:name>")
     # def ui(name):
     #     print("ui route")
-    #     return send_from_directory("Cesium-1.110", name, as_attachment=False)
+    #     return send_from_directory("Cesium-1.91", name, as_attachment=False)
 
     # @app.route("/")
     # def index():
     #     print("Index route")
-
-    #     # with open("index.html", "r") as file:
-    #     #     html_content = file.read()
-    #     #
-    #     # return html_content
     #     return send_file("static/index.html")
+
 
     # @app.route("/ui/")
     # def cesium_ui():
+    #     # print("cesium_ui route")
+    #     # return send_file("static/cesium_ui_server.html")
+        
     #     print("cesium_ui route")
-    #     return send_file("static/cesium_ui_server_map.html")
+
+    #     # Record the start time for this route
+    #     route_start_time = time.time()
+
+    #     # Perform the task for this route (e.g., sending a file)
+    #     file_sent = send_file("static/cesium_ui_server.html")
+
+    #     # Record the end time for this route
+    #     route_end_time = time.time()
+
+    #     # Calculate the execution time for this route
+    #     route_execution_time = route_end_time - route_start_time
+
+    #     print(f"Execution time for cesium_ui route: {route_execution_time} seconds")
+
+    #     return file_sent
+
+# -----------------------------------Cesium sandcastle start---------------------------------------------------------------------------
+    @app.route("/Cesium-1.110/<path:name>")
+    def ui(name):
+        print("ui route")
+        return send_from_directory("Cesium-1.110", name, as_attachment=False)
+
+    @app.route("/")
+    def index():
+        print("Index route")
+
+        # with open("index.html", "r") as file:
+        #     html_content = file.read()
+        #
+        # return html_content
+        return send_file("static/index.html")
+
+    @app.route("/ui/")
+    def cesium_ui():
+        print("cesium_ui route")
+        return send_file("static/cesium_ui_server_map.html")
 # -----------------------------------Cesium sandcastle end---------------------------------------------------------------------------
     
     
@@ -229,49 +229,49 @@ def create_app():
 
 
         # # ---------------------------Approach II: generate b3dm from DB----------------------------------------
-        # positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_indexed_info(tile_id) 
+        positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_indexed_info(tile_id) 
 
-        # # positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_info(tile_id)
-        # # indices = None
+        # positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_info(tile_id)
+        # indices = None
 
-        # # List of 20 unique colors in GLB-compatible format
-        # colors = [
-        #     [0.596, 0.9843, 0.596, 1],   # Mint Green
-        #     [1, 0.7529, 0.7961, 1],     # Soft Pink
-        #     [0.6784, 0.8471, 0.902, 1], # Light Blue
-        #     [0.8, 0.6, 0.8, 1],         # Light Purple
-        #     [1, 0.6, 0.6, 1],           # Light Red
-        #     [1, 0.8, 0.6, 1],           # Light Orange
-        #     [1, 1, 0.5, 1],             # Light Yellow
-        #     [1, 1, 0, 1],               # Yellow
-        #     [0, 1, 0, 1],               # Green
-        #     [0, 0, 1, 1],               # Blue
-        #     [0.5, 0, 0.5, 1],           # Purple
-        #     [1, 0, 0, 1],               # Red
-        #     [1, 1, 1, 1],               # White
-        #     [0.7, 0.7, 0.7, 1],         # Gray
-        #     [0.9, 0.9, 0.9, 1],         # Light Gray
-        #     [0.6, 0.6, 1, 1],           # Lighter Blue
-        #     [0.6, 1, 0.6, 1],           # Lighter Green
-        #     [1, 0.6, 0.6, 1],           # Lighter Red
-        #     [1, 1, 0.6, 1],             # Lighter Yellow
-        #     [0, 0.7, 0.7, 1],           # Lighter Teal
-        # ]*500
-
-
-        # rgb = colors[tile_id]
-        # print("\ntile No.{} rgb: ".format(tile_id), rgb)
-        # print("\n")
+        # List of 20 unique colors in GLB-compatible format
+        colors = [
+            [0.596, 0.9843, 0.596, 1],   # Mint Green
+            [1, 0.7529, 0.7961, 1],     # Soft Pink
+            [0.6784, 0.8471, 0.902, 1], # Light Blue
+            [0.8, 0.6, 0.8, 1],         # Light Purple
+            [1, 0.6, 0.6, 1],           # Light Red
+            [1, 0.8, 0.6, 1],           # Light Orange
+            [1, 1, 0.5, 1],             # Light Yellow
+            [1, 1, 0, 1],               # Yellow
+            [0, 1, 0, 1],               # Green
+            [0, 0, 1, 1],               # Blue
+            [0.5, 0, 0.5, 1],           # Purple
+            [1, 0, 0, 1],               # Red
+            [1, 1, 1, 1],               # White
+            [0.7, 0.7, 0.7, 1],         # Gray
+            [0.9, 0.9, 0.9, 1],         # Light Gray
+            [0.6, 0.6, 1, 1],           # Lighter Blue
+            [0.6, 1, 0.6, 1],           # Lighter Green
+            [1, 0.6, 0.6, 1],           # Lighter Red
+            [1, 1, 0.6, 1],             # Lighter Yellow
+            [0, 0.7, 0.7, 1],           # Lighter Teal
+        ]*500
 
 
-        # # Create an instance of the B3DM class
-        # b3dm = B3DM()
-        # # Set glb data
-        # # Initialization and generate the glTF file
-        # glb_generator = GLB()
-        # glbBytesData = glb_generator.draw_glb(positions, normals, ids, indices, rgb)
-        # # generate b3dm
-        # b3dm_bytes = b3dm.draw_b3dm(featureTableData, batchTableData, glbBytesData)
+        rgb = colors[tile_id]
+        print("\ntile No.{} rgb: ".format(tile_id), rgb)
+        print("\n")
+
+
+        # Create an instance of the B3DM class
+        b3dm = B3DM()
+        # Set glb data
+        # Initialization and generate the glTF file
+        glb_generator = GLB()
+        glbBytesData = glb_generator.draw_glb(positions, normals, ids, indices, rgb)
+        # generate b3dm
+        b3dm_bytes = b3dm.draw_b3dm(featureTableData, batchTableData, glbBytesData)
 
         # # --------------------------------------------Approach III: read from path-------------------------------------
         # b3dm_file_path = f"test_b3dm\\{tile_name}.b3dm"   
