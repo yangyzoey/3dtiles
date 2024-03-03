@@ -66,7 +66,9 @@ WHERE ST_SRID(polygon) = 0;
 
 -- Delete invlid polyongs
 DELETE FROM campus_lod1_face
-WHERE ST_IsValid(polygon) = false
+WHERE ST_IsValid(polygon) = false;
+
+DROP TABLE test_epsg4978;
 ```
 
 ### 2. Create tile in the Postgres. Run the webservice and download the tile on Cesium.
