@@ -15,7 +15,7 @@ def fetch_tile_info(tile_id):
 
         engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
 
-        cur = conn.cursor() # Create a cursor object
+        cur = conn.cursor()
 
 
         # update position, indices in table face
