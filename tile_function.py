@@ -400,8 +400,8 @@ def array_coord(conn, cursor):
     for row in results:
         # print(row)
         fid, oid, pos= row
-        print("fid: ", fid)
-        print("oid: ", oid)
+        # print("fid: ", fid)
+        # print("oid: ", oid)
         # print("pos: ", pos)
 
 
@@ -417,8 +417,7 @@ def array_coord(conn, cursor):
         # print('dic: ', len(pos_by_oid), pos_by_oid)
         # print('dic: ', len(fids_by_oid), fids_by_oid)
 
-        
-
+    
 
     for key, item in pos_by_oid.items():
         # print(f"Key: {key}, Item: {item}")
@@ -487,7 +486,119 @@ def arrays_equal(arr1, arr2, threshold):
             return False  # If the absolute difference is greater than threshold, arrays are not equal
     
     return True 
-  
+
+
+def rotate_X(x, y, z, alpha):
+    x_r = x
+    y_r = np.cos(alpha)*y - np.sin(alpha)*z
+    z_r = np.sin(alpha)*y + np.cos(alpha)*z
+    # print(f"{(x, y, z)} rotate {alpha*(180/np.pi)} degrees around the X-axis,result {(x_r, y_r, z_r)}")
+    return x_r, y_r, z_r
+
+
+def rotate_Y(x, y, z, beta):
+    x_r = np.cos(beta)*x + np.sin(beta)*z
+    y_r = y
+    z_r = -np.sin(beta)*x + np.cos(beta)*z
+    # print(f"{(x, y, z)} rotate {beta*(180/np.pi)} degrees around the Y-axis,result {(x_r, y_r, z_r)}")
+    return x_r, y_r, z_r
+
+
+def input_data( object_table, face_table):
+    # database connection
+    conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+                                port="5432", host="localhost")
+
+    engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+
+    cursor = conn.cursor() # Create a cursor object
+
+    # # test cubes
+    # cursor.execute(
+    # """
+    # INSERT INTO object (id)
+    # SELECT id
+    # FROM object_input;
+    # INSERT INTO face (id, object_id, polygon)
+    # SELECT id, object_id, polygon
+    # FROM face_input;
+    # """
+    # )
+
+    cursor.execute(
+    """
+    INSERT INTO object (id)
+    SELECT id
+    FROM {};
+    INSERT INTO face (id, object_id, polygon)
+    SELECT id, object_id, polygon
+    FROM {}
+    ORDER BY id;
+    """.format(object_table, face_table)
+    )
+
+
+    conn.commit() 
+    cursor.close()
+    conn.close()    
+
+
+# # test cube
+# cursor.execute(
+# """
+# -- Inserting a record into the 'object' table
+# INSERT INTO object (id)
+# VALUES (1);
+
+# -- Inserting records into the 'face' table with respective polygons
+# INSERT INTO face (id, object_id, polygon)
+# VALUES
+#     (1, 1, ST_MakePolygon(ST_GeomFromText('LINESTRING(0 0 0, 1 0 0, 1 1 0, 0 1 0, 0 0 0)'))),
+#     (2, 1, ST_MakePolygon(ST_GeomFromText('LINESTRING(0 0 0, 0 1 0, 0 1 1, 0 0 1, 0 0 0)'))),
+#     (3, 1, ST_MakePolygon(ST_GeomFromText('LINESTRING(0 0 0, 0 0 1, 1 0 1, 1 0 0, 0 0 0)'))),
+#     (4, 1, ST_MakePolygon(ST_GeomFromText('LINESTRING(1 1 1, 1 0 1, 0 0 1, 0 1 1, 1 1 1)'))),
+#     (5, 1, ST_MakePolygon(ST_GeomFromText('LINESTRING(1 1 1, 0 1 1, 0 1 0, 1 1 0, 1 1 1)'))),
+#     (6, 1, ST_MakePolygon(ST_GeomFromText('LINESTRING(1 1 1, 1 1 0, 1 0 0, 1 0 1, 1 1 1)')));
+
+# """
+# )
+
+
+
+# # test polygon
+# cursor.execute(
+# """
+# -- Inserting a record into the 'object' table
+# INSERT INTO object (id)
+# VALUES (1);
+
+# -- Inserting records into the 'face' table with respective polygons
+# INSERT INTO face (id, object_id, polygon)
+# VALUES
+#     (1, 1, ST_MakePolygon(ST_GeomFromText('LINESTRING(0 0 0, 1 0 0, 1 1 0, 0 1 0, 0 0 0)')));
+
+# """
+# )
+
+
+# # delft 37en2, set id and object_id for test
+# cursor.execute(
+# """
+# INSERT INTO object (id)
+# SELECT id
+# FROM object_37en2
+# WHERE id IN (7035064, 8683138, 7037093, 7042150, 7042095) --(7035064)
+# ;
+# INSERT INTO face (id, object_id, polygon)
+# SELECT id, object_id, polygon
+# FROM face_37en2
+# WHERE object_id IN (7035064, 8683138, 7037093, 7042150, 7042095) --(7035064)
+# ORDER BY id;
+# """
+# )
+
+
+
 
 if __name__ == "__main__":
     tile_id = 1

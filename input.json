@@ -1,0 +1,38 @@
+{
+    "delft_campus_lod2": 
+        {
+            "object_table": "campus_object",
+            "face_table": "campus_face"
+        },
+    "delft_campus_lod1": 
+        {
+            "object_table": "campus_lod1_object",
+            "face_table": "campus_lod1_face"
+        },
+    "37en2": 
+    {
+        "object_table": "object_37en2",
+        "face_table": "face_37en2"
+    },
+    "37ez1": 
+    {
+        "object_table": "object_37ez1",
+        "face_table": "face_37ez1"
+    },
+    "37ez2": 
+    {
+        "object_table": "object_37ez2",
+        "face_table": "face_37ez2"
+    },
+    "37en1": 
+    {
+        "object_table": "object_37en1",
+        "face_table": "face_37en1"
+    },
+    "37_4": 
+    {
+        "object_table": "object_37_4",
+        "face_table": "face_37_4"
+    }
+}
+

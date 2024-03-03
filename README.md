@@ -1,3 +1,3 @@
 # 3dtile
 
-tile_creator to be added
+parameters in the input.json file
