@@ -73,8 +73,9 @@ DROP TABLE test_epsg4978;
 
 ### 2. Create tile in the Postgres. Run the webservice and download the tile on Cesium.
 
-download Cesium-1.110.zip from https://github.com/CesiumGS/cesium/releases/tag/1.110 under path 3dtile/
+#### Download Cesium-1.110.zip from https://github.com/CesiumGS/cesium/releases/tag/1.110, and put under path 3dtile/
 
+#### Python env
 $ python tile_creator.py
 
 $ python server.py
