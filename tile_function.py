@@ -525,6 +525,7 @@ def input_data( object_table, face_table):
     # """
     # )
 
+
     cursor.execute(
     """
     INSERT INTO object (id)

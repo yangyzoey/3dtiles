@@ -6,26 +6,22 @@ import json
 
 from tile_function import write_tile, array_coord, rotate_X,rotate_Y, input_data
 
-
-# specfy the dataset theme 
-theme =  "delft_campus_lod2"   # "37en2"
-# specfy the cluster numbers
-cnum1, cnum2 = 1, 2
-
-
 # Load JSON file
 with open('input.json', 'r') as file:
     data = json.load(file)
 
-# Extract table names
-object_input = data[theme]['object_table']
-face_input = data[theme]['face_table']
+# specfy the dataset theme 
+theme =  "test"    # "campus_lod1"  #"campus"   # "37en2"
+
+# Extract table names, cluster_numbers
+object_input = "object_{}".format(theme) #data[theme]['object_table']
+face_input = "face_{}".format(theme) # data[theme]['face_table']
+cnum1, cnum2 = data[theme]['cluster_number'][0], data[theme]['cluster_number'][1]
 
 
 
 # total time start
 total_start_time = time.time()
-
 
 # database connection
 conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
@@ -480,7 +476,7 @@ def delaunay_tess(cursor, conn):
 
     return 0
 
-delaunay_tess(cursor, conn)
+# delaunay_tess(cursor, conn)
 
 def tess(cursor, conn):
 
@@ -731,7 +727,7 @@ def tess(cursor, conn):
         face_total += face_count
     conn.commit() 
 
-# tess(cursor, conn)
+tess(cursor, conn)
 
 
 end_time = time.time()
@@ -1018,7 +1014,6 @@ for id in tid_list:
 end_time = time.time()
 execution_time = end_time - start_time
 print(f"Pre-computatioin execution time: {execution_time} seconds")
-print("pre-computed b3dm stored in DB end")
 
 
 # total time end
