@@ -79,7 +79,7 @@ Download Cesium-1.110.zip from https://github.com/CesiumGS/cesium/releases/tag/1
 Set up python environment
 
 #### Serve the 3D Tile on-the-fly
-Create tile in the Postgres. Run the webservice and download the tile on Cesium.
+Create tile in the Postgres. Run the webservice and visualise on Cesium.
 
 $ python tile_creator.py
 
