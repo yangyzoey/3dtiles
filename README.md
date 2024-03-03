@@ -88,7 +88,7 @@ $ python server.py
 Now connect with a webbrowser to the service running on your own laptop: http://127.0.0.1:5000
 
 #### Note:
-You can also add your dataset theme and change parameters in the input.json file. Then specfy the dataset theme in tile_creator.py
+You can also add your dataset theme and change parameters in the input.json file. Then specify the dataset theme in tile_creator.py
 
 
 ## Result
