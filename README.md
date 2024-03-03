@@ -71,15 +71,17 @@ WHERE ST_IsValid(polygon) = false
 
 ### 2. Create tile in the Postgres. Run the webservice and download the tile on Cesium.
 $ python tile_creator.py
+
 $ python server.py
 
+Now connect with a webbrowser to the service running on your own laptop: http://127.0.0.1:5000
 
 #### Note:
 You can also add your dataset theme and change parameters in the input.json file. Then specfy the dataset theme in tile_creator.py
 
 
-Now connect with a webbrowser to the service running on your own laptop: http://127.0.0.1:5000
-
+### Result
+![Alt text](https://github.com/zoeysunrise/3dtile/tree/test1/9-284-556.png)
 
 
 // Continue..
