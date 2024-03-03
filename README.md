@@ -71,11 +71,11 @@ WHERE ST_IsValid(polygon) = false;
 DROP TABLE test_epsg4978;
 ```
 
-### 2. Create tile in the Postgres. Run the webservice and download the tile on Cesium.
+### 2. Run the prototype
 
 #### Download Cesium-1.110.zip from https://github.com/CesiumGS/cesium/releases/tag/1.110, and put under path 3dtile/
 
-#### Python env
+#### Create tile in the Postgres. Run the webservice and download the tile on Cesium.
 $ python tile_creator.py
 
 $ python server.py
