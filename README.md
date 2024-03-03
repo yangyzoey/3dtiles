@@ -69,18 +69,17 @@ DELETE FROM campus_lod1_face
 WHERE ST_IsValid(polygon) = false
 ```
 
-### 2. Create tile in the Postgres
+### 2. Create tile in the Postgres. Run the webservice and download the tile on Cesium.
 $ python tile_creator.py
-
-
-### 3. Run the webservice and download the tile on Cesium.
 $ python server.py
+
+
+#### Note:
+You can also add your dataset theme and change parameters in the input.json file. Then specfy the dataset theme in tile_creator.py
+
 
 Now connect with a webbrowser to the service running on your own laptop: http://127.0.0.1:5000
 
-
-Note:
-You can also add your dataset theme and change parameters in the input.json file. Then specfy the dataset theme in tile_creator.py
 
 
 // Continue..
