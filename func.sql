@@ -1,3 +1,5 @@
+--To continue
+
 -- calculate min, max coordinates
 -- start
 DROP FUNCTION min_max_coordinates();
