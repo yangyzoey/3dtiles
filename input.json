@@ -4,7 +4,7 @@
         "cluster_number": [1,1],
         "triangulation_flag": "tesselation",
         "precomputed_b3dm": "-1",
-        "filter": "and height <= 10"
+        "filter": " "
     },
     "campus": {
         "description": "3DBAG Campus LOD2",

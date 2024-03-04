@@ -15,7 +15,7 @@ with open('input.json', 'r') as file:
     data = json.load(file)
 
 # specfy the dataset theme 
-theme = "campus" # "test"  # "37en2" # "campus_lod1"  #"campus"   # "37en2"
+theme = "test"  # "37en2" # "campus_lod1"  #"campus"   # "37en2"
 sql_filter = data[theme]['filter']
 
 
