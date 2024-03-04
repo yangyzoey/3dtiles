@@ -60,12 +60,12 @@ CREATE TABLE face_test AS (
 ) ORDER BY id;
 
 -- Update geometries with SRID 0 to SRID 4978
-UPDATE campus_lod1_face
+UPDATE face_test
 SET polygon = ST_SetSRID(polygon, 4978)
 WHERE ST_SRID(polygon) = 0;
 
 -- Delete invlid polyongs
-DELETE FROM campus_lod1_face
+DELETE FROM face_test
 WHERE ST_IsValid(polygon) = false;
 
 DROP TABLE test_epsg4978;
