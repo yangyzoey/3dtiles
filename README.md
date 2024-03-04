@@ -99,5 +99,6 @@ You can also add your dataset theme and change parameters in the input.json file
 This prototype is based on https://github.com/bmmeijers/lis3d
 
 // Continue..
+Add geom_type(polygon, polygonz, etc) flag in the input.json. Put step1 SQL scripts() as a function inside tile_function/creator
 
 //
