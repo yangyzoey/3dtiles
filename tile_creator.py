@@ -11,7 +11,7 @@ with open('input.json', 'r') as file:
     data = json.load(file)
 
 # specfy the dataset theme 
-theme =  "test"    
+theme =  "test"    # "campus_lod1"  #"campus"   # "37en2"
 
 # Extract table names, cluster_numbers
 object_input = "object_{}".format(theme) #data[theme]['object_table']
@@ -993,6 +993,7 @@ def schema_update():
     DROP COLUMN envelope,
     DROP COLUMN object_root;
     ALTER TABLE hierarchy
+    DROP COLUMN row_number,
     DROP COLUMN h_envelope;
     DROP table property;
     """)
