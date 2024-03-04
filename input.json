@@ -2,42 +2,58 @@
     "test": {
         "description": "This is for test",
         "cluster_number": [1,1],
-        "triangulation_flag": "tesselation"
+        "triangulation_flag": "tesselation",
+        "precomputed_b3dm": "-1",
+        "filter": "and height <= 10"
     },
     "campus": {
         "description": "3DBAG Campus LOD2",
-        "cluster_number": [1,2],
-        "triangulation_flag": "tesselation"
+        "cluster_number": [1,1],
+        "triangulation_flag": "tesselation",
+        "precomputed_b3dm": "-1",
+        "filter": "and height > 10"
     },
     "campus_lod1": {
         "description": "3DBAG Campus LOD1",
         "cluster_number": [1,2],
-        "triangulation_flag": "tesselation"
+        "triangulation_flag": "tesselation",
+        "precomputed_b3dm": "-1",
+        "filter": " "
     },
     "37en2": {
         "description": "PDOK 37en2",
         "cluster_number": [2,2],
-        "triangulation_flag": "delaunay"
+        "triangulation_flag": "delaunay",
+        "precomputed_b3dm": "-1",
+        "filter": " "
     },
     "37ez1": {
         "description": "PDOK 37ez1",
         "cluster_number": [2,2],
-        "triangulation_flag": "delaunay"
+        "triangulation_flag": "delaunay",
+        "precomputed_b3dm": "-1",
+        "filter": " "
     },
     "37ez2": {
         "description": "PDOK 37ez2",
         "cluster_number": [2,2],
-        "triangulation_flag": "delaunay"
+        "triangulation_flag": "delaunay",
+        "precomputed_b3dm": "-1",
+        "filter": " "
     },
     "37en1": {
         "description": "PDOK 37en1",
         "cluster_number": [2,2],
-        "triangulation_flag": "delaunay"
+        "triangulation_flag": "delaunay",
+        "precomputed_b3dm": "1",
+        "filter": " "
     },
     "37_4": {
         "description": "PDOK 37_4 of 4 combined files",
         "cluster_number": [4,4],
-        "triangulation_flag": "delaunay"
+        "triangulation_flag": "delaunay",
+        "precomputed_b3dm": "-1",
+        "filter": " "
     }
 }
 

@@ -7,7 +7,17 @@ from sqlalchemy import create_engine
 from glb_generator import GLB
 from b3dm_generator import B3DM, glb_test
 
-from tile_function import fetch_tile, fetch_tile_info, fetch_tile_indexed_info
+from tile_function import fetch_tile, fetch_tile_indexed_info
+
+
+# Load JSON file
+with open('input.json', 'r') as file:
+    data = json.load(file)
+
+# specfy the dataset theme 
+theme = "campus" # "test"  # "37en2" # "campus_lod1"  #"campus"   # "37en2"
+sql_filter = data[theme]['filter']
+
 
 
 def create_app():
@@ -219,19 +229,17 @@ def create_app():
 
 
         # # ----------------------Approach I: fetch pre-created b3dm from DB start-------------------------------------
-        b3dm_bytes = fetch_tile(tile_id)
+        # b3dm_bytes = fetch_tile(tile_id)
 
-        # output = b3dm_bytes
-        # write_path = "test_b3dm/{}.b3dm".format(tile_id)
-        # with open(write_path, 'wb') as b3dm_f:
-        #         b3dm_f.write(output)
         # # ----------------------Approach I: fetch pre-created b3dm from DB end---------------------------------------
 
 
-        # # ---------------------------Approach II: generate b3dm from DB----------------------------------------
-        positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_indexed_info(tile_id) 
+        # # ---------------------------Approach II: generate b3dm from DB start----------------------------------------
 
-        # positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_info(tile_id)
+        #sql_filter = '' # 'and height < 10'
+
+        positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_indexed_info(tile_id, sql_filter) 
+
         # indices = None
 
         # List of 20 unique colors in GLB-compatible format
@@ -258,7 +266,6 @@ def create_app():
             [0, 0.7, 0.7, 1],           # Lighter Teal
         ]*500
 
-
         rgb = colors[tile_id]
         print("\ntile No.{} rgb: ".format(tile_id), rgb)
         print("\n")
@@ -272,6 +279,9 @@ def create_app():
         glbBytesData = glb_generator.draw_glb(positions, normals, ids, indices, rgb)
         # generate b3dm
         b3dm_bytes = b3dm.draw_b3dm(featureTableData, batchTableData, glbBytesData)
+
+        # # ---------------------------Approach II: generate b3dm from DB end----------------------------------------
+
 
         # # --------------------------------------------Approach III: read from path-------------------------------------
         # b3dm_file_path = f"test_b3dm\\{tile_name}.b3dm"   

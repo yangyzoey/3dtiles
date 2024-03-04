@@ -4,21 +4,29 @@ import numpy as np
 import time
 import json
 
-from tile_function import write_tile, array_coord, rotate_X,rotate_Y, triangulation, input_data
+from tile_function import write_tile, array_coord, rotate_X,rotate_Y, triangulation, k_means, schema_update, write_all_tile, input_data
 
 # Load JSON file
 with open('input.json', 'r') as file:
     data = json.load(file)
 
 # specfy the dataset theme 
-theme = "37en2" # "test"  # "campus_lod1"  #"campus"   # "37en2"
+theme = "campus" # "test"  # "37en2" # "campus_lod1"  #"campus"   # "37en2"
 
-# Extract table names, cluster_numbers
+# attrib
+attrib_object = {'height': 'float'}  
+
+
+# Extract info
 object_input = "object_{}".format(theme) 
 face_input = "face_{}".format(theme) 
 cnum1, cnum2 = data[theme]['cluster_number'][0], data[theme]['cluster_number'][1]
 triangulation_flag = data[theme]['triangulation_flag']
-print(triangulation_flag)
+pre_b3dm_flag = data[theme]['precomputed_b3dm'] #0: non-indexed; 1: indexed; -1: no pre-computed
+print("triangulation_flag: ", triangulation_flag)
+
+
+ge_parent = 200
 
 # total time start
 total_start_time = time.time()
@@ -114,7 +122,7 @@ conn.commit()
 
 
 # functioin geometric operation ST_Subtruct, ST_CrossProduct
-cursor.execute("""
+sql = """
 --Compute normal vectors for polygons and store as an array
 
 DROP FUNCTION IF EXISTS ST_Subtruct(geometry, int, int);
@@ -180,7 +188,8 @@ FROM
 (SELECT poly, linestr, ST_AsText(ST_CrossProduct(
 p1, p2
 )) AS n from points) as n) as nn;
-""")
+"""
+cursor.execute(sql)
 conn.commit()
 
 
@@ -236,7 +245,6 @@ conn.commit()
 
 print("normalised normal end")
 
-
 cursor.execute(
 """
 INSERT INTO temp (object_id, id)
@@ -265,18 +273,16 @@ conn.commit()
 
 
 # update table property
-attrib_object = {'height': 'float'}  
-
-attribute_toatal = {**attrib_object}
-items = list(attribute_toatal.items())
-# print(type(items))
-for i in range(len(items)):  
-    # print(len(attribute_toatal))
-    # print(i)
-    sql =  "INSERT INTO property(id, name, type) VALUES({0}, '{1}', '{2}');".format(i+1, items[i][0], items[i][1])
-    # print(sql)
-    cursor.execute(sql)
-    conn.commit()
+# attribute_toatal = {**attrib_object}
+# items = list(attribute_toatal.items())
+# # print(type(items))
+# for i in range(len(items)):  
+#     # print(len(attribute_toatal))
+#     # print(i)
+#     sql =  "INSERT INTO property(id, name, type) VALUES({0}, '{1}', '{2}');".format(i+1, items[i][0], items[i][1])
+#     # print(sql)
+#     cursor.execute(sql)
+#     conn.commit()
 
 
 # update table object  
@@ -338,7 +344,6 @@ print(f"triangulation end, execution time: {tri_execution_time} seconds")
 # ---------------------------------------------------------------------------triangulation end--------------------------------------------------------------------------------------
 
 # Update table object envelope
-cursor = conn.cursor()
 cursor.execute("""
 UPDATE object AS o
 SET envelope = (
@@ -348,7 +353,6 @@ SET envelope = (
 );
 """)
 conn.commit() 
-
 
 # # Create tables tile
 cursor.execute("""
@@ -369,106 +373,18 @@ conn.commit()
 
 print("clustering start")
 # cluster objects to different tiles
-cursor.execute(
-"""
-DROP TABLE IF EXISTS temp_centroids;
-
-CREATE TEMP TABLE temp_centroids AS
-With p
-AS
-(
-SELECT id, (ST_Dump(envelope)).geom AS polygon from object
-)
-SELECT id, 
-ST_AsText(ST_Force2D(ST_Centroid(ST_Collect(polygon)))) AS cc
-FROM p GROUP BY id;
-
-SELECT tmpc.id, cc, envelope FROM temp_centroids tmpc
-JOIN object
-ON tmpc.id = object.id;	
-
-
-DROP TABLE IF EXISTS hierarchical_clusters;
-
--- Create a table to store hierarchical cluster information
-CREATE TEMP TABLE hierarchical_clusters(
-    object_id INTEGER, -- Assuming this column references the object's unique identifier
-    level INTEGER, -- Level of clustering (e.g., 0 for initial clustering, 1 for sub-clustering, 2 for sub-sub-clustering)
-    cluster_id INTEGER, -- Cluster ID at this level
-    parent_cluster_id INTEGER, -- Cluster ID at the previous level (for hierarchy)
-	name TEXT --unique name for all clusters
-);
-
--- Perform k-means clustering for the first level (level 0)
-INSERT INTO hierarchical_clusters (object_id, level, cluster_id, parent_cluster_id, name)
-SELECT object_id, 1 AS level, cid AS cluster_id, NULL AS parent_cluster_id, 'Level_0_Cluster_' || cid AS name
-FROM (
-    SELECT ST_ClusterKMeans(cc, {})  OVER()  AS cid, id as object_id, cc
-    FROM temp_centroids AS obj
-) level_0_clusters;
-
-
--- Subsequent levels of clustering (if required)
--- Example: Second level clustering
-INSERT INTO hierarchical_clusters(object_id, level, cluster_id, parent_cluster_id, name)
-SELECT object_id, 2 AS level, cid AS cluster_id, parent_cluster_id, 'Level_1_Cluster_' || parent_cluster_id || '_SubCluster_' || cid AS name
-FROM (
-    SELECT 
-        ST_ClusterKMeans(o.cc, {}) OVER(PARTITION BY t.cluster_id ORDER BY t.cluster_id) AS cid, 
-        id AS object_id, 
-        t.cluster_id AS parent_cluster_id
-    FROM hierarchical_clusters t
-    JOIN temp_centroids o ON t.object_id = o.id
-    WHERE t.level = 1 -- Consider removing specific Cluster_id filter here
-) level_1_clusters;
-
-
-DROP TABLE IF EXISTS hierarchy;
-
-CREATE TABLE hierarchy AS
-SELECT (ARRAY_AGG(DISTINCT level))[1] AS level, 
-ARRAY_AGG(object_id) AS object_id,
-(ARRAY_AGG(DISTINCT cluster_id))[1] AS cluster_id,
-(ARRAY_AGG(DISTINCT parent_cluster_id))[1] AS parent_cluster_id,
---ST_AsText(ST_Collect(envelope))
-ST_Extent(envelope) AS envelope, 
-ST_3DExtent(envelope) AS h_envelope
-FROM hierarchical_clusters 
-JOIN object
-on object.id = object_id
-GROUP BY name;
-
-
-ALTER TABLE hierarchy
-ADD COLUMN row_number INTEGER,
-ADD COLUMN id SERIAL;
-
---Update row_number column with values generated by ROW_NUMBER() window function
-WITH n AS (
-    SELECT id,
-           ROW_NUMBER() OVER (PARTITION BY level ORDER BY cluster_id) AS rn
-    FROM hierarchy
-)
-UPDATE hierarchy AS h
-SET row_number = n.rn
-FROM n
-WHERE h.id = n.id;
-
---SELECT * FROM hierarchy;
-""".format(cnum1, cnum2)
-)
-conn.commit() 
+k_means(cnum1, cnum2) 
 print("clustering end")
 
 
 # INSERT statement to update the id in the tile table
 t1 = 1
 tileset = 1
-sql = "INSERT INTO tile (id, geometric_error, refine) VALUES({0}, 200, 'ADD');\
+sql = "INSERT INTO tile (id, geometric_error, refine) VALUES({0}, {2}, 'ADD');\
 INSERT INTO tile (id) SELECT row_number FROM hierarchy WHERE level = 2 and row_number != 1;\
 UPDATE tile SET tileset_id = {1} WHERE id IS NOT NULL;\
 UPDATE tile SET parent_id = {0} \
-WHERE id IN (SELECT row_number FROM hierarchy WHERE level = 2) and id != 1;".format(t1,tileset)
+WHERE id IN (SELECT row_number FROM hierarchy WHERE level = 2) and id != 1;".format(t1,tileset, ge_parent)
 cursor.execute(sql)
 conn.commit() 
 
@@ -559,6 +475,11 @@ update tile set content = id::text;
 conn.commit() 
 
 
+
+# covert coord to node_idx, update table face.tri_node_id, object.nodes
+print("Coord to node_idx start")
+start_time = time.time()
+
 sql = "SELECT id FROM tile;"
 cursor.execute(sql)
 results = cursor.fetchall()
@@ -567,56 +488,28 @@ conn.commit()
 
 tid_list= [int(i[0]) for i in results]
 # print(tid_list)
-
-# covert coord to node_idx, update table face.tri_node_id, object.nodes
 array_coord(conn, cursor)
-
-cursor.close()
-conn.close()    # Close the database connection
-
-
-def schema_update():
-    # database connection
-    conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
-                                port="5432", host="localhost")
-
-    engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
-    cursor = conn.cursor() # Create a cursor object
-    cursor.execute("""
-    ALTER TABLE face
-    DROP COLUMN fid,
-    DROP COLUMN position,
-    DROP COLUMN tri_index,
-    DROP COLUMN pos_idx_test,
-    DROP COLUMN if_planar,
-    DROP COLUMN polygon;
-    ALTER TABLE object
-    DROP COLUMN lod,
-    DROP COLUMN envelope,
-    DROP COLUMN object_root;
-    ALTER TABLE hierarchy
-    DROP COLUMN row_number,
-    DROP COLUMN h_envelope;
-    DROP table property;
-    """)
-    conn.commit() 
-    cursor.close()
-    conn.close()    # Close the database connection
-
-schema_update()
-
-
-print("pre-computed b3dm stored in DB start")
-start_time = time.time()
-
-# write pre-computed b3dm to DB
-for id in tid_list:
-    write_tile(id, 1)   # 1: indexed
-    # write_tile(id, 0)   # 0: non-idexed
 
 end_time = time.time()
 execution_time = end_time - start_time
-print(f"Pre-computatioin execution time: {execution_time} seconds")
+print(f"Coord to node_idx end, execution time: {execution_time} seconds")
+
+
+
+# pre-computed b3dm in DB
+print("pre-computed b3dm stored in DB start")
+start_time = time.time()
+
+write_all_tile(pre_b3dm_flag, tid_list)
+
+end_time = time.time()
+execution_time = end_time - start_time
+print(f"Pre-computatioin end, execution time: {execution_time} seconds")
+
+
+
+# delete unnecessary tables
+schema_update()
 
 
 # total time end

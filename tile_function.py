@@ -7,7 +7,9 @@ from glb_generator import GLB
 from b3dm_generator import B3DM, glb_test
 
 
-def fetch_tile_info(tile_id):
+
+
+def fetch_tile_indexed_info(tile_id, sql_filter):
 
         # database connection
         conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
@@ -24,8 +26,9 @@ def fetch_tile_info(tile_id):
         indices = []
         ids = []
 
-
-        sql = "SELECT id, height, nodes FROM object WHERE tile_id = {0} ORDER BY id".format(tile_id)
+        ### Add other attribute values
+        sql = "SELECT id, nodes, height FROM object WHERE tile_id = {0} {1} ORDER BY id".format(tile_id, sql_filter)
+    
         cur.execute(sql)
         results = cur.fetchall()
         # print(results)
@@ -34,127 +37,13 @@ def fetch_tile_info(tile_id):
         # print("tile No.{} object_id list: ".format(tile_id),oid_list)
 
 
-        # # for test purpose, can be set as 1
-        # oid_list = [7035064, 8683138, 7037093, 6215444, 7042150, 7042095, 760994, 6200408]
-
-
-        height_values= [float(i[1]) for i in results]
-        # print("height property list: ",height_values)
-
-
-        nodes_values= [i[2] for i in results]
+        nodes_values= [i[1] for i in results]
         # print('nodes_values: ', nodes_values)
 
 
-        # # "longitude", "latitude"
-        attrib_list = ["Height", "ID"]
-        json_dict = {attrib_list[0]: height_values, attrib_list[1]: list(range(len(height_values)))}
-        # print('')
-        properties = json_dict
-        # print("properties", properties)
-
-        object_count = len(oid_list)
-
-
-        # Set the Feature Table
-        json_data = {"BATCH_LENGTH": object_count }  #,"RTC_CENTER":[1215019.2111447915,-4736339.477299974,4081627.9570209784]
-        featureTableData = json.dumps(json_data, separators=(',', ':'))
-        # Set the Batch Table data
-        batchTableData = json.dumps(properties, separators=(',', ':'))
-
-
-        object_vert_total = 0
-        for idx, object_id in enumerate(oid_list):
-            
-            sql = "SELECT normal, tri_node_id FROM face \
-            where object_id = {0} and tri_node_id is not null \
-            ORDER BY id;".format(object_id)
-            # print(sql)
-            cur.execute(sql)
-
-            res = cur.fetchall()
-            # print(res)
-
-            coord = nodes_values[idx]
-
-            pos_list = []
-            nor_list = []
-
-            for item in res:
-                
-                tri_node_id = item[1]
-                
-                # print('tri_node_id: ', tri_node_id)
-
-                p = [coord[i] for i in tri_node_id]
-                # p = [[round(num) for num in sublist] for sublist in p]
-                # print('p repos: ', p)
-                # print('\n')
-
-                n = [item[0]]*len(p)
-                
-                pos_list.extend(p)
-                nor_list.extend(n)
-            
-            ids_list = [idx]*len(pos_list)
-            # print("pos_list: ", len(pos_list), pos_list)
-            # print("nor_list: ", len(nor_list), nor_list)
-            # print("ids_list: ", len(ids_list), ids_list)
-
-
-            pos.extend(pos_list)
-            nor.extend(nor_list)
-            ids.extend(ids_list)
-        indices = list(range(len(pos)))
-        # print("\npos: ", len(pos), pos)
-        # print("\nnor: ", len(nor),nor)
-        # print("\nindices: ", len(indices))
-        # print("\nids: ", len(ids),ids)
-
-
-        conn.commit() 
-        cur.close()
-        conn.close()    # Close the database connection
-
-
-        return pos, nor, indices, ids, featureTableData, batchTableData
-
-
-def fetch_tile_indexed_info(tile_id):
-
-        # database connection
-        conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
-                                    port="5432", host="localhost")
-
-        engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
-
-        cur = conn.cursor() # Create a cursor object
-
-
-        # update position, indices in table face
-        pos = []
-        nor = []
-        indices = []
-        ids = []
-
-        sql = "SELECT id, height, nodes FROM object WHERE tile_id = {0} ORDER BY id".format(tile_id)
-        cur.execute(sql)
-        results = cur.fetchall()
-        # print(results)
-
-        oid_list= [int(i[0]) for i in results]
-        # print("tile No.{} object_id list: ".format(tile_id),oid_list)
-
-
-        # for test purpose, can be set as 1
-        # oid_list = [1]
-
-        nodes_values= [i[2] for i in results]
-        # print('nodes_values: ', nodes_values)
-
-
-        height_values= [float(i[1]) for i in results]
+        height_values= [float(i[2]) for i in results]
         # print("height property list: ",height_values)
+        ### ADD other attribute values
 
         # # "longitude", "latitude"
         attrib_list = ["Height", "ID"]
@@ -297,16 +186,14 @@ def fetch_tile(tile_id):
 
 
 # 0: non-indexed; 1: indexed
-def write_tile(tile_id, tag):
- 
-
+def write_tile(tile_id, flag):
     # database connection
     conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
                                 port="5432", host="localhost")
     engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
     cur = conn.cursor() # Create a cursor object
 
-    if tag == 0:
+    if flag == 0:
         # object_count  defines how the objects in this tile
         positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_info(tile_id)
     else:
@@ -378,6 +265,22 @@ def write_tile(tile_id, tag):
     conn.commit() 
     cur.close()
     conn.close()    # Close the database connection
+    return 0
+
+
+def write_all_tile(pre_b3dm_flag, tid_list):
+
+    index_flag = int(pre_b3dm_flag)
+
+    if index_flag == -1:
+        print("No pre-computed b3dm")
+    else:
+        print("Write pre-computed b3dm to DB, {0}".format(["pre-computed nonindexed b3dm", "pre-computed indexed b3dm"][index_flag]))
+
+        for id in tid_list:
+            write_tile(id, index_flag)   # 1: indexed
+            # write_tile(id, 0)   # 0: non-idexed
+
     return 0
 
 
@@ -916,7 +819,140 @@ def triangulation(flag):
 
     conn.commit() 
     cursor.close()
-    conn.close()    # Close the database connection
+    conn.close()  
+    return 0
+
+
+def k_means(cnum1, cnum2):
+    # database connection
+    conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+                                port="5432", host="localhost")
+    engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+    cursor = conn.cursor() 
+
+
+    cursor.execute(
+    """
+    DROP TABLE IF EXISTS temp_centroids;
+
+    CREATE TEMP TABLE temp_centroids AS
+    With p
+    AS
+    (
+    SELECT id, (ST_Dump(envelope)).geom AS polygon from object
+    )
+    SELECT id, 
+    ST_AsText(ST_Force2D(ST_Centroid(ST_Collect(polygon)))) AS cc
+    FROM p GROUP BY id;
+
+    SELECT tmpc.id, cc, envelope FROM temp_centroids tmpc
+    JOIN object
+    ON tmpc.id = object.id;	
+
+
+    DROP TABLE IF EXISTS hierarchical_clusters;
+
+    -- Create a table to store hierarchical cluster information
+    CREATE TEMP TABLE hierarchical_clusters(
+        object_id INTEGER, -- Assuming this column references the object's unique identifier
+        level INTEGER, -- Level of clustering (e.g., 0 for initial clustering, 1 for sub-clustering, 2 for sub-sub-clustering)
+        cluster_id INTEGER, -- Cluster ID at this level
+        parent_cluster_id INTEGER, -- Cluster ID at the previous level (for hierarchy)
+        name TEXT --unique name for all clusters
+    );
+
+    -- Perform k-means clustering for the first level (level 0)
+    INSERT INTO hierarchical_clusters (object_id, level, cluster_id, parent_cluster_id, name)
+    SELECT object_id, 1 AS level, cid AS cluster_id, NULL AS parent_cluster_id, 'Level_0_Cluster_' || cid AS name
+    FROM (
+        SELECT ST_ClusterKMeans(cc, {})  OVER()  AS cid, id as object_id, cc
+        FROM temp_centroids AS obj
+    ) level_0_clusters;
+
+
+    -- Subsequent levels of clustering (if required)
+    -- Example: Second level clustering
+    INSERT INTO hierarchical_clusters(object_id, level, cluster_id, parent_cluster_id, name)
+    SELECT object_id, 2 AS level, cid AS cluster_id, parent_cluster_id, 'Level_1_Cluster_' || parent_cluster_id || '_SubCluster_' || cid AS name
+    FROM (
+        SELECT 
+            ST_ClusterKMeans(o.cc, {}) OVER(PARTITION BY t.cluster_id ORDER BY t.cluster_id) AS cid, 
+            id AS object_id, 
+            t.cluster_id AS parent_cluster_id
+        FROM hierarchical_clusters t
+        JOIN temp_centroids o ON t.object_id = o.id
+        WHERE t.level = 1 -- Consider removing specific Cluster_id filter here
+    ) level_1_clusters;
+
+
+    DROP TABLE IF EXISTS hierarchy;
+
+    CREATE TABLE hierarchy AS
+    SELECT (ARRAY_AGG(DISTINCT level))[1] AS level, 
+    ARRAY_AGG(object_id) AS object_id,
+    (ARRAY_AGG(DISTINCT cluster_id))[1] AS cluster_id,
+    (ARRAY_AGG(DISTINCT parent_cluster_id))[1] AS parent_cluster_id,
+    --ST_AsText(ST_Collect(envelope))
+    ST_Extent(envelope) AS envelope, 
+    ST_3DExtent(envelope) AS h_envelope
+    FROM hierarchical_clusters 
+    JOIN object
+    on object.id = object_id
+    GROUP BY name;
+
+
+    ALTER TABLE hierarchy
+    ADD COLUMN row_number INTEGER,
+    ADD COLUMN id SERIAL;
+
+    --Update row_number column with values generated by ROW_NUMBER() window function
+    WITH n AS (
+        SELECT id,
+            ROW_NUMBER() OVER (PARTITION BY level ORDER BY cluster_id) AS rn
+        FROM hierarchy
+    )
+    UPDATE hierarchy AS h
+    SET row_number = n.rn
+    FROM n
+    WHERE h.id = n.id;
+
+    --SELECT * FROM hierarchy;
+    """.format(cnum1, cnum2)
+    )
+
+    conn.commit() 
+    cursor.close()
+    conn.close()    
+    return 0
+
+
+def schema_update():
+    # database connection
+    conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+                                port="5432", host="localhost")
+
+    engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+    cursor = conn.cursor() # Create a cursor object
+    cursor.execute("""
+    ALTER TABLE face
+    DROP COLUMN fid,
+    DROP COLUMN position,
+    DROP COLUMN tri_index,
+    DROP COLUMN pos_idx_test,
+    DROP COLUMN if_planar,
+    DROP COLUMN polygon;
+    ALTER TABLE object
+    DROP COLUMN lod,
+    DROP COLUMN envelope,
+    DROP COLUMN object_root;
+    ALTER TABLE hierarchy
+    DROP COLUMN row_number,
+    DROP COLUMN h_envelope;
+    DROP table property;
+    """)
+    conn.commit() 
+    cursor.close()
+    conn.close() 
     return 0
 
 
@@ -957,7 +993,126 @@ def input_data( object_table, face_table):
 
     conn.commit() 
     cursor.close()
-    conn.close()    
+    conn.close()   
+    return 0 
+
+
+
+# to be updated
+# def fetch_tile_info(tile_id):
+
+#         # database connection
+#         conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+#                                     port="5432", host="localhost")
+
+#         engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+
+#         cur = conn.cursor() # Create a cursor object
+
+
+#         # update position, indices in table face
+#         pos = []
+#         nor = []
+#         indices = []
+#         ids = []
+
+
+#         sql = "SELECT id, nodes, height FROM object WHERE tile_id = {0} ORDER BY id".format(tile_id)
+#         cur.execute(sql)
+#         results = cur.fetchall()
+#         # print(results)
+
+#         oid_list= [int(i[0]) for i in results]
+#         # print("tile No.{} object_id list: ".format(tile_id),oid_list)
+
+
+#         # # for test purpose, can be set as 1
+#         # oid_list = [7035064, 8683138, 7037093, 6215444, 7042150, 7042095, 760994, 6200408]
+
+
+#         height_values= [float(i[2]) for i in results]
+#         # print("height property list: ",height_values)
+
+
+#         nodes_values= [i[1] for i in results]
+#         # print('nodes_values: ', nodes_values)
+
+
+#         # # "longitude", "latitude"
+#         attrib_list = ["Height", "ID"]
+#         json_dict = {attrib_list[0]: height_values, attrib_list[1]: list(range(len(height_values)))}
+#         # print('')
+#         properties = json_dict
+#         # print("properties", properties)
+
+#         object_count = len(oid_list)
+
+
+#         # Set the Feature Table
+#         json_data = {"BATCH_LENGTH": object_count }  #,"RTC_CENTER":[1215019.2111447915,-4736339.477299974,4081627.9570209784]
+#         featureTableData = json.dumps(json_data, separators=(',', ':'))
+#         # Set the Batch Table data
+#         batchTableData = json.dumps(properties, separators=(',', ':'))
+
+
+#         object_vert_total = 0
+#         for idx, object_id in enumerate(oid_list):
+            
+#             sql = "SELECT normal, tri_node_id FROM face \
+#             where object_id = {0} and tri_node_id is not null \
+#             ORDER BY id;".format(object_id)
+#             # print(sql)
+#             cur.execute(sql)
+
+#             res = cur.fetchall()
+#             # print(res)
+
+#             coord = nodes_values[idx]
+
+#             pos_list = []
+#             nor_list = []
+
+#             for item in res:
+                
+#                 tri_node_id = item[1]
+                
+#                 # print('tri_node_id: ', tri_node_id)
+
+#                 p = [coord[i] for i in tri_node_id]
+#                 # p = [[round(num) for num in sublist] for sublist in p]
+#                 # print('p repos: ', p)
+#                 # print('\n')
+
+#                 n = [item[0]]*len(p)
+                
+#                 pos_list.extend(p)
+#                 nor_list.extend(n)
+            
+#             ids_list = [idx]*len(pos_list)
+#             # print("pos_list: ", len(pos_list), pos_list)
+#             # print("nor_list: ", len(nor_list), nor_list)
+#             # print("ids_list: ", len(ids_list), ids_list)
+
+
+#             pos.extend(pos_list)
+#             nor.extend(nor_list)
+#             ids.extend(ids_list)
+#         indices = list(range(len(pos)))
+#         # print("\npos: ", len(pos), pos)
+#         # print("\nnor: ", len(nor),nor)
+#         # print("\nindices: ", len(indices))
+#         # print("\nids: ", len(ids),ids)
+
+
+#         conn.commit() 
+#         cur.close()
+#         conn.close()    # Close the database connection
+
+
+#         return pos, nor, indices, ids, featureTableData, batchTableData
+
+
+
 
 
 # # test cube
