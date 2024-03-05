@@ -7,8 +7,6 @@ from glb_generator import GLB
 from b3dm_generator import B3DM, glb_test
 
 
-
-
 def fetch_tile_indexed_info(tile_id, sql_filter):
 
         # database connection
@@ -156,6 +154,9 @@ def fetch_tile_indexed_info(tile_id, sql_filter):
         cur.close()
         conn.close()    # Close the database connection
 
+        # test
+        # featureTableData, batchTableData = None, None
+
 
         return pos, nor, indices, ids, featureTableData, batchTableData
 
@@ -186,7 +187,7 @@ def fetch_tile(tile_id):
 
 
 # 0: non-indexed; 1: indexed
-def write_tile(tile_id, flag):
+def write_tile(tile_id, flag, sql_filter):
     # database connection
     conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
                                 port="5432", host="localhost")
@@ -197,7 +198,7 @@ def write_tile(tile_id, flag):
         # object_count  defines how the objects in this tile
         positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_info(tile_id)
     else:
-        positions, normals, indices, ids, featureTableData, batchTableData =  fetch_tile_indexed_info(tile_id)
+        positions, normals, indices, ids, featureTableData, batchTableData =  fetch_tile_indexed_info(tile_id, sql_filter)
 
 
     # print("positions", positions)
@@ -268,7 +269,7 @@ def write_tile(tile_id, flag):
     return 0
 
 
-def write_all_tile(pre_b3dm_flag, tid_list):
+def write_all_tile(pre_b3dm_flag, tid_list, sql_filter):
 
     index_flag = int(pre_b3dm_flag)
 
@@ -278,7 +279,7 @@ def write_all_tile(pre_b3dm_flag, tid_list):
         print("Write pre-computed b3dm to DB, {0}".format(["pre-computed nonindexed b3dm", "pre-computed indexed b3dm"][index_flag]))
 
         for id in tid_list:
-            write_tile(id, index_flag)   # 1: indexed
+            write_tile(id, index_flag, sql_filter)   # 1: indexed
             # write_tile(id, 0)   # 0: non-idexed
 
     return 0

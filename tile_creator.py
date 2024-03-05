@@ -4,14 +4,14 @@ import numpy as np
 import time
 import json
 
-from tile_function import write_tile, array_coord, rotate_X,rotate_Y, triangulation, k_means, schema_update, write_all_tile, input_data
+from tile_function import array_coord, rotate_X,rotate_Y, triangulation, k_means, schema_update, write_all_tile, input_data
 
 # Load JSON file
 with open('input.json', 'r') as file:
     data = json.load(file)
 
 # specfy the dataset theme 
-theme = "test"  # "37en2" # "campus_lod1"  #"campus"   # "37en2"
+theme = "test" # "campus" # "37en1"  # "37en2" # "campus_lod1"
 
 # attrib
 attrib_object = {'height': 'float'}  
@@ -24,6 +24,7 @@ cnum1, cnum2 = data[theme]['cluster_number'][0], data[theme]['cluster_number'][1
 triangulation_flag = data[theme]['triangulation_flag']
 pre_b3dm_flag = data[theme]['precomputed_b3dm'] #0: non-indexed; 1: indexed; -1: no pre-computed
 print("triangulation_flag: ", triangulation_flag)
+sql_filter = data[theme]['filter']
 
 
 ge_parent = 200
@@ -500,7 +501,7 @@ print(f"Coord to node_idx end, execution time: {execution_time} seconds")
 print("pre-computed b3dm stored in DB start")
 start_time = time.time()
 
-write_all_tile(pre_b3dm_flag, tid_list)
+write_all_tile(pre_b3dm_flag, tid_list, sql_filter)
 
 end_time = time.time()
 execution_time = end_time - start_time

@@ -10,14 +10,15 @@ from b3dm_generator import B3DM, glb_test
 from tile_function import fetch_tile, fetch_tile_indexed_info
 
 
-# Load JSON file
-with open('input.json', 'r') as file:
-    data = json.load(file)
+# # Load JSON file
+# with open('input.json', 'r') as file:
+#     data = json.load(file)
 
-# specfy the dataset theme 
-theme = "test"  # "37en2" # "campus_lod1"  #"campus"   # "37en2"
-sql_filter = data[theme]['filter']
+# # specfy the dataset theme 
+# theme = "test"  # "37en2" # "campus_lod1"  #"campus"   # "37en2"
+# sql_filter = data[theme]['filter']
 
+sql_filter = ""
 
 
 def create_app():
@@ -235,8 +236,6 @@ def create_app():
 
 
         # # ---------------------------Approach II: generate b3dm from DB start----------------------------------------
-
-        #sql_filter = '' # 'and height < 10'
 
         positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_indexed_info(tile_id, sql_filter) 
 
