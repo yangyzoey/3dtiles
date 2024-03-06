@@ -74,7 +74,9 @@ DROP TABLE test_epsg4978;
 ### 2. Run the prototype
 
 #### Preparation
-Download Cesium-1.110.zip from https://github.com/CesiumGS/cesium/releases/tag/1.110, and put under path 3dtile/
+Set up for your local database in database.ini
+
+Download Cesium-1.110.zip from https://github.com/CesiumGS/cesium/releases/tag/1.110, and put in the project root directory.
 
 Set up python environment (See requirements.txt)
 
