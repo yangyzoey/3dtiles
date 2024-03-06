@@ -9,15 +9,6 @@ from b3dm_generator import B3DM, glb_test
 
 def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter):
 
-        # # database connection
-        # conn = pg.connect(dbname="github", user="postgres", password="120598",
-        #                             port="5432", host="localhost")
-
-        # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-
-        # cursor = conn.cursor() # Create a cursor object
-
-
         # update position, indices in table face
         pos = []
         nor = []
@@ -162,13 +153,6 @@ def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter):
 
 
 def fetch_tile(conn, cursor, tile_id): 
-    
-    # # database connection
-    # conn = pg.connect(dbname="github", user="postgres", password="120598",
-    #                             port="5432", host="localhost")
-    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-    # cur = conn.cursor() # Create a cursor object
-
 
     # Define the SQL query with placeholders
     sql = "SELECT b3dm from tile where id = {0}".format(tile_id)
@@ -188,11 +172,6 @@ def fetch_tile(conn, cursor, tile_id):
 
 # 0: non-indexed; 1: indexed
 def write_tile(conn, cursor, tile_id, flag, sql_filter):
-    # # database connection
-    # conn = pg.connect(dbname="github", user="postgres", password="120598",
-    #                             port="5432", host="localhost")
-    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-    # cursor = conn.cursor() # Create a cursor object
 
     if flag == 0:
         # object_count  defines how the objects in this tile
@@ -806,12 +785,6 @@ def tess(conn, cursor):
 
 
 def triangulation(conn, cursor, flag):
-    # # database connection
-    # conn = pg.connect(dbname="github", user="postgres", password="120598",
-    #                             port="5432", host="localhost")
-    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-    # cursor = conn.cursor() 
-
 
     if flag == "tesselation":
         tess(conn, cursor)
@@ -825,12 +798,6 @@ def triangulation(conn, cursor, flag):
 
 
 def k_means(conn, cursor, cnum1, cnum2):
-    # # database connection
-    # conn = pg.connect(dbname="github", user="postgres", password="120598",
-    #                             port="5432", host="localhost")
-    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-    # cursor = conn.cursor() 
-
 
     cursor.execute(
     """
@@ -928,12 +895,6 @@ def k_means(conn, cursor, cnum1, cnum2):
 
 
 def schema_update(conn, cursor):
-    # database connection
-    # conn = pg.connect(dbname="github", user="postgres", password="120598",
-    #                             port="5432", host="localhost")
-
-    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-    # cursor = conn.cursor() 
 
     cursor.execute("""
     ALTER TABLE face
@@ -960,13 +921,6 @@ def schema_update(conn, cursor):
 
 
 def input_data(conn, cursor, object_table, face_table):
-    # # database connection
-    # conn = pg.connect(dbname="github", user="postgres", password="120598",
-    #                             port="5432", host="localhost")
-
-    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-
-    # cursor = conn.cursor() # Create a cursor object
 
     # # test cubes
     # cursor.execute(
@@ -1002,16 +956,7 @@ def input_data(conn, cursor, object_table, face_table):
 
 
 # to be updated
-# def fetch_tile_info(tile_id):
-
-#         # database connection
-#         conn = pg.connect(dbname="github", user="postgres", password="120598",
-#                                     port="5432", host="localhost")
-
-#         engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-
-#         cur = conn.cursor() # Create a cursor object
-
+# def fetch_tile_info(conn, cursor, tile_id):
 
 #         # update position, indices in table face
 #         pos = []
@@ -1021,8 +966,8 @@ def input_data(conn, cursor, object_table, face_table):
 
 
 #         sql = "SELECT id, nodes, height FROM object WHERE tile_id = {0} ORDER BY id".format(tile_id)
-#         cur.execute(sql)
-#         results = cur.fetchall()
+#         cursor.execute(sql)
+#         results = cursor.fetchall()
 #         # print(results)
 
 #         oid_list= [int(i[0]) for i in results]
@@ -1065,9 +1010,9 @@ def input_data(conn, cursor, object_table, face_table):
 #             where object_id = {0} and tri_node_id is not null \
 #             ORDER BY id;".format(object_id)
 #             # print(sql)
-#             cur.execute(sql)
+#             cursor.execute(sql)
 
-#             res = cur.fetchall()
+#             res = cursor.fetchall()
 #             # print(res)
 
 #             coord = nodes_values[idx]
@@ -1108,7 +1053,7 @@ def input_data(conn, cursor, object_table, face_table):
 
 
 #         conn.commit() 
-#         cur.close()
+#         cursor.close()
 #         conn.close()    # Close the database connection
 
 
@@ -1178,12 +1123,7 @@ def input_data(conn, cursor, object_table, face_table):
 if __name__ == "__main__":
   
     pass
-    # # database connection
-    # conn = pg.connect(dbname="github", user="postgres", password="120598",
-    #                             port="5432", host="localhost")
-    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-    # cursor = conn.cursor() # Create a cursor object
-    # array_coord(conn, cursor)
+
 
     #-------------------------------test function------------------------------------------------
     # positions, normals, ids, indices = fetch_pos_nor_ids_indices(tile_id)
