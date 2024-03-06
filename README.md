@@ -15,6 +15,8 @@ $ ogrinfo -so 9-284-556.gpkg
 
 
 #### Next, load the dump file into Postgres. This results a table 'test_lod12_3d', where the 3D geometry is stored as multipolygonz, with coordinate reference system EPSG:7415:
+##### Make sure PostGIS is enabled in the target database.
+
 $ psql -d [database_name] -U [database_host] -h localhost -f test_9-284-556.dmp
 
 
