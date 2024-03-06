@@ -100,9 +100,9 @@ def create_app():
 
 
         # database connection
-        conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+        conn = pg.connect(dbname="github", user="postgres", password="120598",
                           port="5432", host="localhost")
-        engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+        engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
 
         id = 1
         # Create a cursor object
@@ -179,10 +179,10 @@ def create_app():
         # print("tileset_json type: ", type(tileset_json))
 
         # write json file
-        output = formatted_json
-        write_path = "test_b3dm/{}.json".format('tileset')
-        with open(write_path, "w") as json_file:
-            json.dump(output, json_file)
+        # output = formatted_json
+        # write_path = "test_b3dm/{}.json".format('tileset')
+        # with open(write_path, "w") as json_file:
+        #     json.dump(output, json_file)
 
 
         contents = tileset_json
@@ -303,10 +303,10 @@ def create_app():
         # with open(write_path, 'wb') as glb_f:
         #     glb_f.write(glb_bytes)
 
-        output = b3dm_bytes
-        write_path = "test_b3dm/{}.b3dm".format(tile_id)
-        with open(write_path, 'wb') as b3dm_f:
-                b3dm_f.write(output)
+        # output = b3dm_bytes
+        # write_path = "test_b3dm/{}.b3dm".format(tile_id)
+        # with open(write_path, 'wb') as b3dm_f:
+        #         b3dm_f.write(output)
         # ---------------------------------write for debuging-------------------------------------------------------
 
 

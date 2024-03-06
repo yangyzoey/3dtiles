@@ -74,12 +74,9 @@ DROP TABLE test_epsg4978;
 ### 2. Run the prototype
 
 #### Preparation
-//Fix the settings for your local database set up.//
-
 Download Cesium-1.110.zip from https://github.com/CesiumGS/cesium/releases/tag/1.110, and put under path 3dtile/
 
 Set up python environment (See requirements.txt)
-
 
 #### Serve the 3D Tile on-the-fly
 Compute tile information (normal, position, triangulated topology, and hierarchical structure) in the Postgres. Run the webservice and complete the tile creation. Then visualise on Cesium.
@@ -103,5 +100,5 @@ This prototype is based on https://github.com/bmmeijers/lis3d
 
 // Continue..
 Add geom_type(polygon, polygonz, etc) flag in the input.json. Put step1 SQL scripts() as a function inside tile_function/creator
-database.ini
+FIX DB settings
 //

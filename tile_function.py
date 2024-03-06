@@ -10,10 +10,10 @@ from b3dm_generator import B3DM, glb_test
 def fetch_tile_indexed_info(tile_id, sql_filter):
 
         # database connection
-        conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+        conn = pg.connect(dbname="github", user="postgres", password="120598",
                                     port="5432", host="localhost")
 
-        engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+        engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
 
         cur = conn.cursor() # Create a cursor object
 
@@ -161,12 +161,12 @@ def fetch_tile_indexed_info(tile_id, sql_filter):
         return pos, nor, indices, ids, featureTableData, batchTableData
 
 
-def fetch_tile(tile_id):
+def fetch_tile(tile_id): 
     
     # database connection
-    conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+    conn = pg.connect(dbname="github", user="postgres", password="120598",
                                 port="5432", host="localhost")
-    engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+    engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
     cur = conn.cursor() # Create a cursor object
 
 
@@ -189,9 +189,9 @@ def fetch_tile(tile_id):
 # 0: non-indexed; 1: indexed
 def write_tile(tile_id, flag, sql_filter):
     # database connection
-    conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+    conn = pg.connect(dbname="github", user="postgres", password="120598",
                                 port="5432", host="localhost")
-    engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+    engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
     cur = conn.cursor() # Create a cursor object
 
     if flag == 0:
@@ -807,9 +807,9 @@ def tess(cursor, conn):
 
 def triangulation(flag):
     # database connection
-    conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+    conn = pg.connect(dbname="github", user="postgres", password="120598",
                                 port="5432", host="localhost")
-    engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+    engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
     cursor = conn.cursor() 
 
 
@@ -826,9 +826,9 @@ def triangulation(flag):
 
 def k_means(cnum1, cnum2):
     # database connection
-    conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+    conn = pg.connect(dbname="github", user="postgres", password="120598",
                                 port="5432", host="localhost")
-    engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+    engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
     cursor = conn.cursor() 
 
 
@@ -929,10 +929,10 @@ def k_means(cnum1, cnum2):
 
 def schema_update():
     # database connection
-    conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+    conn = pg.connect(dbname="github", user="postgres", password="120598",
                                 port="5432", host="localhost")
 
-    engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+    engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
     cursor = conn.cursor() # Create a cursor object
     cursor.execute("""
     ALTER TABLE face
@@ -950,6 +950,7 @@ def schema_update():
     DROP COLUMN row_number,
     DROP COLUMN h_envelope;
     DROP table property;
+    DROP table temp;
     """)
     conn.commit() 
     cursor.close()
@@ -959,10 +960,10 @@ def schema_update():
 
 def input_data( object_table, face_table):
     # database connection
-    conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+    conn = pg.connect(dbname="github", user="postgres", password="120598",
                                 port="5432", host="localhost")
 
-    engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+    engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
 
     cursor = conn.cursor() # Create a cursor object
 
@@ -1003,10 +1004,10 @@ def input_data( object_table, face_table):
 # def fetch_tile_info(tile_id):
 
 #         # database connection
-#         conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+#         conn = pg.connect(dbname="github", user="postgres", password="120598",
 #                                     port="5432", host="localhost")
 
-#         engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+#         engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
 
 #         cur = conn.cursor() # Create a cursor object
 
@@ -1180,9 +1181,9 @@ if __name__ == "__main__":
 
 
     # # database connection
-    # conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+    # conn = pg.connect(dbname="github", user="postgres", password="120598",
     #                             port="5432", host="localhost")
-    # engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
     # cursor = conn.cursor() # Create a cursor object
     # array_coord(conn, cursor)
 

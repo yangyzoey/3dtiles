@@ -33,10 +33,10 @@ ge_parent = 200
 total_start_time = time.time()
 
 # database connection
-conn = pg.connect(dbname="sunrise", user="postgres", password="120598",
+conn = pg.connect(dbname="github", user="postgres", password="120598",
                             port="5432", host="localhost")
 
-engine = create_engine('postgresql://postgres:120598@localhost:5432/sunrise')
+engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
 
 
 # drop tables if exists
@@ -169,29 +169,29 @@ BEGIN
 END;
 $$
 LANGUAGE plpgsql IMMUTABLE;
-
-with points AS (
-SELECT id, poly, ST_AsText(linestr) AS linestr,
-ST_AsText(ST_Subtruct(ST_PointN(t.linestr, 2), ST_PointN(t.linestr, 3))) AS p1,
-ST_AsText(ST_Subtruct(ST_PointN(t.linestr, 2), ST_PointN(t.linestr, 1))) AS p2
-FROM (
-SELECT id, ST_AsText(polygon) AS poly, ST_ExteriorRing(polygon) AS linestr
-FROM tesselate_test
-ORDER BY id
-)AS t
-)
-
-SELECT  ARRAY[x / sqrt(x*x + y*y + z*z) ,
-       y / sqrt(x*x + y*y + z*z),
-       z / sqrt(x*x + y*y + z*z)]
-FROM
-(SELECT ST_X(n) as x, ST_Y(n) as y, ST_Z(n) as z  FROM
-(SELECT poly, linestr, ST_AsText(ST_CrossProduct(
-p1, p2
-)) AS n from points) as n) as nn;
 """
 cursor.execute(sql)
 conn.commit()
+
+# with points AS (
+# SELECT id, poly, ST_AsText(linestr) AS linestr,
+# ST_AsText(ST_Subtruct(ST_PointN(t.linestr, 2), ST_PointN(t.linestr, 3))) AS p1,
+# ST_AsText(ST_Subtruct(ST_PointN(t.linestr, 2), ST_PointN(t.linestr, 1))) AS p2
+# FROM (
+# SELECT id, ST_AsText(polygon) AS poly, ST_ExteriorRing(polygon) AS linestr
+# FROM tesselate_test
+# ORDER BY id
+# )AS t
+# )
+
+# SELECT  ARRAY[x / sqrt(x*x + y*y + z*z) ,
+#        y / sqrt(x*x + y*y + z*z),
+#        z / sqrt(x*x + y*y + z*z)]
+# FROM
+# (SELECT ST_X(n) as x, ST_Y(n) as y, ST_Z(n) as z  FROM
+# (SELECT poly, linestr, ST_AsText(ST_CrossProduct(
+# p1, p2
+# )) AS n from points) as n) as nn;
 
 
 # map dataset to the face table and object table
