@@ -79,7 +79,7 @@ WHERE ST_IsValid(polygon) = false;
 DROP TABLE test_epsg4978;
 ```
 
-### 2. Run the prototype
+### 2. Run the prototype:
 
 #### Preparation
 Set up for your local database in database.ini
@@ -105,7 +105,7 @@ Now connect with a webbrowser to the service running on your own laptop: http://
 You can also add your dataset theme and change parameters in the input.json file. Then specify the dataset theme in tile_creator.py
 
 
-## Result
+## Result:
 ![Visualisation](https://github.com/zoeysunrise/3dtile/tree/test1/9-284-556.png)
 
 
