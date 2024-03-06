@@ -26,7 +26,7 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 $ psql -d [database_name] -U [database_host] -h localhost -f test_9-284-556.dmp
 ```
 
-#### Next, perform a coordinate transformation from EPSG:7415 (RD+NAP) to EPSG:4978. Harmonise geometries to valid polygonz. Excute the scripts in Postgres:
+#### Next, perform a coordinate transformation from EPSG:7415 (RD+NAP) to EPSG:4978. Harmonise geometries to valid polygonz. Execute script in Postgres:
 ```sql
 DROP TABLE IF EXISTS test_epsg4978;
 create table test_epsg4978 as select fid as gid, st_transform(geom, 4978) as geom4978 from dbuser.test_lod12_3d;
