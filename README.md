@@ -9,7 +9,7 @@ Downloaded a tile from 3dbag.nl in geopackage format (gpkg) https://3dbag.nl/en/
 
 #### Then, convert the 3D layer (3D Multi Polygon) with LOD 1.2 into PostGIS dump format, using ogr2ogr:
 ```cmd
-ogr2ogr --config PG_USE_COPY YES -f PGDump test_9-284-556.dmp 9-284-556.gpkg -sql "SELECT * FROM lod12_3d" -nln "test_lod12_3d" -lco SCHEMA=dbuser
+$ ogr2ogr --config PG_USE_COPY YES -f PGDump test_9-284-556.dmp 9-284-556.gpkg -sql "SELECT * FROM lod12_3d" -nln "test_lod12_3d" -lco SCHEMA=dbuser
 ```
 
 #### The command helps check the information of the dataset:
@@ -92,7 +92,7 @@ Set up python environment (See requirements.txt)
 Compute tile information (normal, position, triangulated topology, and hierarchical structure) in the Postgres. Run the webservice and complete the tile creation. Then visualise on Cesium.
 
 ```cmd
-python tile_creator.py
+$ python tile_creator.py
 ```
 
 ```cmd
