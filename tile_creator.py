@@ -1,10 +1,12 @@
 import psycopg2 as pg
-from sqlalchemy import create_engine
+# from sqlalchemy import create_engine
 import numpy as np
 import time
 import json
 
 from tile_function import array_coord, rotate_X,rotate_Y, triangulation, k_means, schema_update, write_all_tile, input_data
+from dbconfig import config
+
 
 # Load JSON file
 with open('input.json', 'r') as file:
@@ -33,14 +35,18 @@ ge_parent = 200
 total_start_time = time.time()
 
 # database connection
-conn = pg.connect(dbname="github", user="postgres", password="120598",
-                            port="5432", host="localhost")
+conn_params = config(filename='database.ini', section='postgresql')
 
-engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-
+conn = pg.connect(
+    dbname=conn_params["database"], 
+    user=conn_params["user"], 
+    password=conn_params["password"],
+    port=conn_params["port"], 
+    host=conn_params["host"])
 
 # drop tables if exists
 cursor = conn.cursor() # Create a cursor object
+
 sql = """
 DO $$ 
 BEGIN 
@@ -173,32 +179,13 @@ LANGUAGE plpgsql IMMUTABLE;
 cursor.execute(sql)
 conn.commit()
 
-# with points AS (
-# SELECT id, poly, ST_AsText(linestr) AS linestr,
-# ST_AsText(ST_Subtruct(ST_PointN(t.linestr, 2), ST_PointN(t.linestr, 3))) AS p1,
-# ST_AsText(ST_Subtruct(ST_PointN(t.linestr, 2), ST_PointN(t.linestr, 1))) AS p2
-# FROM (
-# SELECT id, ST_AsText(polygon) AS poly, ST_ExteriorRing(polygon) AS linestr
-# FROM tesselate_test
-# ORDER BY id
-# )AS t
-# )
-
-# SELECT  ARRAY[x / sqrt(x*x + y*y + z*z) ,
-#        y / sqrt(x*x + y*y + z*z),
-#        z / sqrt(x*x + y*y + z*z)]
-# FROM
-# (SELECT ST_X(n) as x, ST_Y(n) as y, ST_Z(n) as z  FROM
-# (SELECT poly, linestr, ST_AsText(ST_CrossProduct(
-# p1, p2
-# )) AS n from points) as n) as nn;
-
 
 # map dataset to the face table and object table
-input_data(object_input, face_input)
+input_data(conn, cursor, object_input, face_input)
 
 
 print("normalised normal start")
+
 
 # functioin compute normalised normal
 cursor.execute("""
@@ -337,7 +324,7 @@ print("triangulation start")
 start_time = time.time()
 
 
-triangulation(triangulation_flag)
+triangulation(conn, cursor, triangulation_flag)
 
 end_time = time.time()
 tri_execution_time = end_time - start_time
@@ -374,7 +361,7 @@ conn.commit()
 
 print("clustering start")
 # cluster objects to different tiles
-k_means(cnum1, cnum2) 
+k_means(conn, cursor, cnum1, cnum2) 
 print("clustering end")
 
 
@@ -501,7 +488,7 @@ print(f"Coord to node_idx end, execution time: {execution_time} seconds")
 print("pre-computed b3dm stored in DB start")
 start_time = time.time()
 
-write_all_tile(pre_b3dm_flag, tid_list, sql_filter)
+write_all_tile(conn, cursor, pre_b3dm_flag, tid_list, sql_filter)
 
 end_time = time.time()
 execution_time = end_time - start_time
@@ -510,7 +497,7 @@ print(f"Pre-computatioin end, execution time: {execution_time} seconds")
 
 
 # delete unnecessary tables
-schema_update()
+schema_update(conn, cursor)
 
 
 # total time end

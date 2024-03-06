@@ -7,15 +7,15 @@ from glb_generator import GLB
 from b3dm_generator import B3DM, glb_test
 
 
-def fetch_tile_indexed_info(tile_id, sql_filter):
+def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter):
 
-        # database connection
-        conn = pg.connect(dbname="github", user="postgres", password="120598",
-                                    port="5432", host="localhost")
+        # # database connection
+        # conn = pg.connect(dbname="github", user="postgres", password="120598",
+        #                             port="5432", host="localhost")
 
-        engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
+        # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
 
-        cur = conn.cursor() # Create a cursor object
+        # cursor = conn.cursor() # Create a cursor object
 
 
         # update position, indices in table face
@@ -27,8 +27,8 @@ def fetch_tile_indexed_info(tile_id, sql_filter):
         ### Add other attribute values
         sql = "SELECT id, nodes, height FROM object WHERE tile_id = {0} {1} ORDER BY id".format(tile_id, sql_filter)
     
-        cur.execute(sql)
-        results = cur.fetchall()
+        cursor.execute(sql)
+        results = cursor.fetchall()
         # print(results)
 
         oid_list= [int(i[0]) for i in results]
@@ -68,9 +68,9 @@ def fetch_tile_indexed_info(tile_id, sql_filter):
             where object_id = {0} and tri_node_id is not null \
             ORDER BY id;".format(object_id)
             # print(sql)
-            cur.execute(sql)
+            cursor.execute(sql)
 
-            res = cur.fetchall()
+            res = cursor.fetchall()
             # print(res)
 
             coord = nodes_values[idx]
@@ -151,8 +151,8 @@ def fetch_tile_indexed_info(tile_id, sql_filter):
 
 
         conn.commit() 
-        cur.close()
-        conn.close()    # Close the database connection
+        # cursor.close()
+        # conn.close()    # Close the database connection
 
         # test
         # featureTableData, batchTableData = None, None
@@ -161,44 +161,44 @@ def fetch_tile_indexed_info(tile_id, sql_filter):
         return pos, nor, indices, ids, featureTableData, batchTableData
 
 
-def fetch_tile(tile_id): 
+def fetch_tile(conn, cursor, tile_id): 
     
-    # database connection
-    conn = pg.connect(dbname="github", user="postgres", password="120598",
-                                port="5432", host="localhost")
-    engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-    cur = conn.cursor() # Create a cursor object
+    # # database connection
+    # conn = pg.connect(dbname="github", user="postgres", password="120598",
+    #                             port="5432", host="localhost")
+    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
+    # cur = conn.cursor() # Create a cursor object
 
 
     # Define the SQL query with placeholders
     sql = "SELECT b3dm from tile where id = {0}".format(tile_id)
-    cur.execute(sql)
+    cursor.execute(sql)
 
     print("fetch tile successfully: {0}".format(tile_id))
 
-    results = cur.fetchall()
+    results = cursor.fetchall()
     bytes = results[0][0]
 
     conn.commit() 
-    cur.close()
-    conn.close()    # Close the database connection
+    # cursor.close()
+    # conn.close()    # Close the database connection
 
     return bytes
 
 
 # 0: non-indexed; 1: indexed
-def write_tile(tile_id, flag, sql_filter):
-    # database connection
-    conn = pg.connect(dbname="github", user="postgres", password="120598",
-                                port="5432", host="localhost")
-    engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-    cur = conn.cursor() # Create a cursor object
+def write_tile(conn, cursor, tile_id, flag, sql_filter):
+    # # database connection
+    # conn = pg.connect(dbname="github", user="postgres", password="120598",
+    #                             port="5432", host="localhost")
+    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
+    # cursor = conn.cursor() # Create a cursor object
 
     if flag == 0:
         # object_count  defines how the objects in this tile
-        positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_info(tile_id)
+        positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_info(conn, cursor, tile_id)
     else:
-        positions, normals, indices, ids, featureTableData, batchTableData =  fetch_tile_indexed_info(tile_id, sql_filter)
+        positions, normals, indices, ids, featureTableData, batchTableData =  fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter)
 
 
     # print("positions", positions)
@@ -258,18 +258,18 @@ def write_tile(tile_id, flag, sql_filter):
     # Provide the values for the placeholders as a tuple
     values = (b3dm_bytes, tile_id)
     # Execute the query with the provided values
-    cur.execute(sql, values)
+    cursor.execute(sql, values)
 
 
     print("write tile successfully: {0}".format(tile_id))
 
     conn.commit() 
-    cur.close()
-    conn.close()    # Close the database connection
+    # cursor.close()
+    # conn.close()    # Close the database connection
     return 0
 
 
-def write_all_tile(pre_b3dm_flag, tid_list, sql_filter):
+def write_all_tile(conn, cursor, pre_b3dm_flag, tid_list, sql_filter):
 
     index_flag = int(pre_b3dm_flag)
 
@@ -279,7 +279,7 @@ def write_all_tile(pre_b3dm_flag, tid_list, sql_filter):
         print("Write pre-computed b3dm to DB, {0}".format(["pre-computed nonindexed b3dm", "pre-computed indexed b3dm"][index_flag]))
 
         for id in tid_list:
-            write_tile(id, index_flag, sql_filter)   # 1: indexed
+            write_tile(conn, cursor, id, index_flag, sql_filter)   # 1: indexed
             # write_tile(id, 0)   # 0: non-idexed
 
     return 0
@@ -408,7 +408,7 @@ def rotate_Y(x, y, z, beta):
     return x_r, y_r, z_r
 
 
-def delaunay_tess(cursor, conn):
+def delaunay_tess(conn, cursor):
 
     # delaunay
     cursor.execute("""
@@ -555,7 +555,7 @@ def delaunay_tess(cursor, conn):
     return 0
 
 
-def tess(cursor, conn):
+def tess(conn, cursor):
 
     # position3d from temp.polygon3d
     cursor.execute("""
@@ -805,31 +805,31 @@ def tess(cursor, conn):
     conn.commit() 
 
 
-def triangulation(flag):
-    # database connection
-    conn = pg.connect(dbname="github", user="postgres", password="120598",
-                                port="5432", host="localhost")
-    engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-    cursor = conn.cursor() 
+def triangulation(conn, cursor, flag):
+    # # database connection
+    # conn = pg.connect(dbname="github", user="postgres", password="120598",
+    #                             port="5432", host="localhost")
+    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
+    # cursor = conn.cursor() 
 
 
     if flag == "tesselation":
-        tess(cursor, conn)
+        tess(conn, cursor)
     else:
-        delaunay_tess(cursor, conn)
+        delaunay_tess(conn, cursor)
 
     conn.commit() 
-    cursor.close()
-    conn.close()  
+    # cursor.close()
+    # conn.close()  
     return 0
 
 
-def k_means(cnum1, cnum2):
-    # database connection
-    conn = pg.connect(dbname="github", user="postgres", password="120598",
-                                port="5432", host="localhost")
-    engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-    cursor = conn.cursor() 
+def k_means(conn, cursor, cnum1, cnum2):
+    # # database connection
+    # conn = pg.connect(dbname="github", user="postgres", password="120598",
+    #                             port="5432", host="localhost")
+    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
+    # cursor = conn.cursor() 
 
 
     cursor.execute(
@@ -922,18 +922,19 @@ def k_means(cnum1, cnum2):
     )
 
     conn.commit() 
-    cursor.close()
-    conn.close()    
+    # cursor.close()
+    # conn.close()    
     return 0
 
 
-def schema_update():
+def schema_update(conn, cursor):
     # database connection
-    conn = pg.connect(dbname="github", user="postgres", password="120598",
-                                port="5432", host="localhost")
+    # conn = pg.connect(dbname="github", user="postgres", password="120598",
+    #                             port="5432", host="localhost")
 
-    engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
-    cursor = conn.cursor() # Create a cursor object
+    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
+    # cursor = conn.cursor() 
+
     cursor.execute("""
     ALTER TABLE face
     DROP COLUMN fid,
@@ -953,19 +954,19 @@ def schema_update():
     DROP table temp;
     """)
     conn.commit() 
-    cursor.close()
-    conn.close() 
+    # cursor.close()
+    # conn.close() 
     return 0
 
 
-def input_data( object_table, face_table):
-    # database connection
-    conn = pg.connect(dbname="github", user="postgres", password="120598",
-                                port="5432", host="localhost")
+def input_data(conn, cursor, object_table, face_table):
+    # # database connection
+    # conn = pg.connect(dbname="github", user="postgres", password="120598",
+    #                             port="5432", host="localhost")
 
-    engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
+    # engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
 
-    cursor = conn.cursor() # Create a cursor object
+    # cursor = conn.cursor() # Create a cursor object
 
     # # test cubes
     # cursor.execute(
@@ -994,8 +995,8 @@ def input_data( object_table, face_table):
 
 
     conn.commit() 
-    cursor.close()
-    conn.close()   
+    # cursor.close()
+    # conn.close()   
     return 0 
 
 
@@ -1175,11 +1176,8 @@ def input_data( object_table, face_table):
 
 
 if __name__ == "__main__":
-    tile_id = 1
-    fetch_tile_indexed_info(tile_id)
-    # fetch_tile_info(tile_id)
-
-
+  
+    pass
     # # database connection
     # conn = pg.connect(dbname="github", user="postgres", password="120598",
     #                             port="5432", host="localhost")

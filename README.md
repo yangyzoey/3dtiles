@@ -74,8 +74,6 @@ DROP TABLE test_epsg4978;
 ### 2. Run the prototype
 
 #### Preparation
-//Fix DB settings//
-
 Download Cesium-1.110.zip from https://github.com/CesiumGS/cesium/releases/tag/1.110, and put under path 3dtile/
 
 Set up python environment (See requirements.txt)
@@ -102,5 +100,5 @@ This prototype is based on https://github.com/bmmeijers/lis3d
 
 // Continue..
 Add geom_type(polygon, polygonz, etc) flag in the input.json. Put step1 SQL scripts() as a function inside tile_function/creator
-FIX DB settings
+
 //

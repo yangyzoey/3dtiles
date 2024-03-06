@@ -1,3 +1,6 @@
+# based on: https://gist.github.com/vulcan25/55ce270d76bf78044d067c51e23ae5ad
+from psycopg2 import pool
+
 from flask import Flask, g, jsonify, Response, url_for, send_from_directory, send_file
 import numpy as np
 import json
@@ -8,6 +11,8 @@ from glb_generator import GLB
 from b3dm_generator import B3DM, glb_test
 
 from tile_function import fetch_tile, fetch_tile_indexed_info
+
+from dbconfig import config
 
 
 # # Load JSON file
@@ -21,8 +26,33 @@ from tile_function import fetch_tile, fetch_tile_indexed_info
 sql_filter = ""
 
 
+def get_db():
+    print("Getting DbConnection")
+    if "db" not in g:
+        g.db = app.config["postgreSQL_pool"].getconn()
+    return g.db
+
+
 def create_app():
     app = Flask(__name__)
+
+    conn_params = config()
+    app.config["postgreSQL_pool"] = pool.SimpleConnectionPool(
+        1,
+        20,
+        user=conn_params["user"],
+        password=conn_params["password"],
+        host=conn_params["host"],
+        port=conn_params["port"],
+        database=conn_params["database"],
+    )
+
+    @app.teardown_appcontext
+    def close_conn(e):
+        db = g.pop("db", None)
+        if db is not None:
+            print("Closing DbConnection")
+            app.config["postgreSQL_pool"].putconn(db)
 
 
     # # https: // github.com / CesiumGS / cesium / wiki / CesiumJS - Features - Checklist
@@ -60,7 +90,7 @@ def create_app():
 
     #     return file_sent
 
-# -----------------------------------Cesium sandcastle start---------------------------------------------------------------------------
+    # -----------------------------------Cesium sandcastle start---------------------------------------------------------------------------
     @app.route("/Cesium-1.110/<path:name>")
     def ui(name):
         print("ui route")
@@ -69,6 +99,8 @@ def create_app():
     @app.route("/")
     def index():
         print("Index route")
+        
+
 
         # with open("index.html", "r") as file:
         #     html_content = file.read()
@@ -80,7 +112,7 @@ def create_app():
     def cesium_ui():
         print("cesium_ui route")
         return send_file("static/cesium_ui_server_map.html")
-# -----------------------------------Cesium sandcastle end---------------------------------------------------------------------------
+    # -----------------------------------Cesium sandcastle end---------------------------------------------------------------------------
     
     
     @app.route("/tiles/tileset.json")  
@@ -88,21 +120,9 @@ def create_app():
     def tiles_tileset():
         print("tiles_tileset")
 
-        # contents = fetch_tileset(theme)
-
-        # tileset_file_path = 'data\\{}.json'.format(theme)
-
-        # # write json file check
-        # with open(tileset_file_path, 'w') as file:
-        #     # Use the json.dump() function to write the data to the file.
-        #     json.dump(contents, file, indent=2)
-        # print(f'Data has been written to {tileset_file_path}')
-
-
         # database connection
-        conn = pg.connect(dbname="github", user="postgres", password="120598",
-                          port="5432", host="localhost")
-        engine = create_engine('postgresql://postgres:120598@localhost:5432/github')
+        conn = get_db()
+
 
         id = 1
         # Create a cursor object
@@ -222,6 +242,11 @@ def create_app():
     def tiles_one_tile(tile_name):
         route_start_time = time.time()
 
+        # database connection
+        conn = get_db()
+        # Create a cursor object
+        cursor = conn.cursor()
+
         # experiments: fetch one specific tile
         # tile_name = 2
 
@@ -237,7 +262,7 @@ def create_app():
 
         # # ---------------------------Approach II: generate b3dm from DB start----------------------------------------
 
-        positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_indexed_info(tile_id, sql_filter) 
+        positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter) 
 
         # indices = None
 
@@ -356,90 +381,15 @@ def read_data(file_path):
     return positions, normals, ids, indices
 
 
-# test purpose
-def fetch_tileset(example):
-
-    if example == "multiple_boxes" or "parent" or "cube_and_icosphere" or "3DTilesFormats_region" or "3DTilesFormats_box" or "3DTilesFormats_box_b3dm":
-        tileset_file_path = 'data\\{}.json'.format(theme)
-
-        # read tileset directly
-        f = open(tileset_file_path)
-        tileset_json = json.load(f)
-
-    # if example == "3DTilesFormats":
-    #     tileset_file_path = 'data\\3DTilesFormats.json'
-
-    #     # read tileset directly
-    #     f = open(tileset_file_path)
-    #     tileset_json = json.load(f)
-
-
-    if example == "one_box":
-        # database connection
-        conn = pg.connect(dbname="3dtiles", user="postgres", password="120598",
-                            port="5432", host="localhost")
-        engine = create_engine('postgresql://postgres:120598@localhost:5432/zoey')
-
-        # Create a cursor object
-        cursor = conn.cursor()
-        # Fetch data from the database
-        cursor.execute("SELECT * FROM tileset WHERE id = 1")
-        tileset_data = cursor.fetchone()
-        # print('tileset_data: ')
-        # print(tileset_data)
-
-        cursor.execute("SELECT * FROM tile WHERE tileset_id = 1")
-        tile_data = cursor.fetchall()
-        # print('tile_data: ')
-        # print(tile_data)
-
-        cursor.execute("SELECT * FROM content WHERE tile_id = 1")
-        children_data = cursor.fetchall()
-        # print('children_data: ')
-        # print(children_data)
-
-        # Structure the fetched data into a JSON structure
-        tileset_json = {
-            "asset": {
-                "version": tileset_data[1]  # Assuming 'version' is in the second column
-            },
-            "geometricError": float(tileset_data[2]),  # Assuming 'geometricError' is in the third column
-            "root": {
-                "boundingVolume": {
-                    "box": [float(pt) for pt in tile_data[0][2]]  # Assuming 'bounding_volume' is in the third column
-                },
-                "geometricError": float(tile_data[0][3]),  # Assuming 'geometricError' is in the fourth column
-                "children": [],
-                "refine": tile_data[0][4],
-                "transform": [float(pt) for pt in tile_data[0][5]]
-            }
-        }
-        # print(tileset_json)
-
-        # Add child tiles to the root tile's "children" list
-        for child_data in children_data:
-            child_tile = {
-                "boundingVolume": {
-                    "box": [float(pt) for pt in child_data[2]]  # Assuming 'bounding_volume' is in the third column
-                },
-                "geometricError": float(child_data[3]),  # Assuming 'geometricError' is in the fourth column
-                "children": [],
-                "refine": child_data[5],  # Assuming 'refine' is in the sixth column
-                "content": {
-                    "uri":  url_for('tiles_one_tile', tile_name = "1")  # tile_name =  # "1"
-                }
-            }
-            tileset_json["root"]["children"].append(child_tile)
-
-
-    return tileset_json
-
-
 if __name__ == "__main__":
     
     import time
 
     start_time = time.time()
+
+    # db = config(filename='database.ini', section='postgresql')
+    # # {'host': 'localhost', 'database': 'zoey', 'user': 'postgres', 'password': '120598', 'port': '5432'}
+    # print(db)
 
     app = create_app()
     app.run(debug=True)
