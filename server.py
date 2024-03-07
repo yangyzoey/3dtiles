@@ -10,7 +10,7 @@ from sqlalchemy import create_engine
 from glb_generator import GLB
 from b3dm_generator import B3DM, glb_test
 
-from tile_function import fetch_tile, fetch_tile_indexed_info
+from tile_function import fetch_precomputed_tile, fetch_tile_indexed_info
 
 from dbconfig import config
 
@@ -23,7 +23,10 @@ from dbconfig import config
 # theme = "test"  # "37en2" # "campus_lod1"  #"campus"   # "37en2"
 # sql_filter = data[theme]['filter']
 
+# attrib filter
 sql_filter = ""
+# attrib
+attrib_object = {'height': 'float', 'year': 'int'}  
 
 
 def get_db():
@@ -255,14 +258,14 @@ def create_app():
 
 
         # # ----------------------Approach I: fetch pre-created b3dm from DB start-------------------------------------
-        # b3dm_bytes = fetch_tile(tile_id)
+        # b3dm_bytes = fetch_precomputed_tile(conn, cursor, tile_id)
 
         # # ----------------------Approach I: fetch pre-created b3dm from DB end---------------------------------------
 
 
         # # ---------------------------Approach II: generate b3dm from DB start----------------------------------------
 
-        positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter) 
+        positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object) 
 
         # indices = None
 
@@ -318,9 +321,6 @@ def create_app():
         # Calculate the execution time for this route
         route_execution_time = route_end_time - route_start_time
         print(f"Execution time for b3dm fetch: {route_execution_time} seconds")
-
-        # fetch_time = fetch_time + route_execution_time
-        # print(f"Total time for b3dm fetch: {fetch_time} seconds")
 
         # ---------------------------------write for debuging-------------------------------------------------------
         # glb_bytes = glbBytesData

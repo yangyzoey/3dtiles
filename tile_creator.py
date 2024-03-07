@@ -13,13 +13,18 @@ with open('input.json', 'r') as file:
     data = json.load(file)
 
 # specfy the dataset theme 
-theme = "test" # "campus" # "37en1"  # "37en2" # "campus_lod1"
+theme = "test" #"37en2" #"test" #  # "37en1"  # "37en2" # "campus_lod1"
 
 # attrib
-attrib_object = {'height': 'float'}  
+# attrib_object = {'height': 'float', 'year': 'int'}  
+ # # "longitude", "latitude"
 
 
 # Extract info
+attrib_object_str = data[theme]['attrib_object']
+attrib_object = json.loads(attrib_object_str.replace("'", "\"")) # Convert the string to a dictionary
+
+
 object_input = "object_{}".format(theme) 
 face_input = "face_{}".format(theme) 
 cnum1, cnum2 = data[theme]['cluster_number'][0], data[theme]['cluster_number'][1]
@@ -83,7 +88,7 @@ sql =  "CREATE EXTENSION IF NOT EXISTS postgis;\
         nodes DOUBLE PRECISION[],\
         LoD INT,\
         object_root INT,\
-        envelope geometry,\
+        envelope box3d,\
         UNIQUE(id)\
         );\
         CREATE TABLE face(\
@@ -285,7 +290,7 @@ for i in range(len(items)):
     conn.commit()
 
 
-# operation on table temp
+# Add 3D envelope on the table object
 cursor.execute("""
 -- Drop the table if it exists
 DROP TABLE IF EXISTS h;
@@ -297,12 +302,34 @@ SELECT object_id, ST_3DExtent(f.polygon) as envelope
 FROM face AS f
 GROUP BY object_id
 )
-SELECT object_id, (ST_ZMax(e.envelope) - ST_ZMin(e.envelope)) AS height
+SELECT object_id, e.envelope AS envelope
 FROM e;
 
-UPDATE object SET height = h.height FROM h WHERE id = object_id;
+UPDATE object SET envelope = h.envelope FROM h WHERE id = object_id;
+""")
+conn.commit()
 
 
+# operation 3D envelope, compute height
+cursor.execute("""
+UPDATE object SET height = (ST_ZMax(envelope) - ST_ZMin(envelope));
+""")
+conn.commit()
+
+
+# operation 3D envelope, compute year
+cursor.execute("""
+-- Set seed for the random number generator
+SELECT SETSEED(0.5);
+
+-- Update the 'year' column using the random number generator
+UPDATE object SET year = 2000 + FLOOR(RANDOM() * (2021 - 2000));
+""")
+conn.commit()
+
+
+# operation on table temp
+cursor.execute("""
 --store rotated polygon3d
 UPDATE temp SET polygon3d = face.polygon FROM face where temp.id = face.id and if_vertical = false;
 UPDATE temp SET polygon3d = ST_RotateY(ST_RotateX(face.polygon, pi()/6), pi()/6) FROM face \
@@ -331,16 +358,16 @@ tri_execution_time = end_time - start_time
 print(f"triangulation end, execution time: {tri_execution_time} seconds")
 # ---------------------------------------------------------------------------triangulation end--------------------------------------------------------------------------------------
 
-# Update table object envelope
-cursor.execute("""
-UPDATE object AS o
-SET envelope = (
-    SELECT ST_3DExtent(f.polygon)
-    FROM face AS f
-    WHERE f.object_id = o.id
-);
-""")
-conn.commit() 
+# # Update table object envelope
+# cursor.execute("""
+# UPDATE object AS o
+# SET envelope = (
+#     SELECT ST_3DExtent(f.polygon)
+#     FROM face AS f
+#     WHERE f.object_id = o.id
+# );
+# """)
+# conn.commit() 
 
 # # Create tables tile
 cursor.execute("""
@@ -365,6 +392,7 @@ k_means(conn, cursor, cnum1, cnum2)
 print("clustering end")
 
 
+# -----------------------------------------------create tiles from hierarchy--------------------------------------------------
 # INSERT statement to update the id in the tile table
 t1 = 1
 tileset = 1
@@ -461,7 +489,7 @@ update tile set content = id::text;
 
 """)
 conn.commit() 
-
+# -----------------------------------------------create tiles from hierarchy--------------------------------------------------
 
 
 # covert coord to node_idx, update table face.tri_node_id, object.nodes
@@ -485,14 +513,14 @@ print(f"Coord to node_idx end, execution time: {execution_time} seconds")
 
 
 # pre-computed b3dm in DB
-print("pre-computed b3dm stored in DB start")
+print("Pre-computed b3dm stored in DB start")
 start_time = time.time()
 
-write_all_tile(conn, cursor, pre_b3dm_flag, tid_list, sql_filter)
+write_all_tile(conn, cursor, pre_b3dm_flag, tid_list, sql_filter, attrib_object)
 
 end_time = time.time()
 execution_time = end_time - start_time
-print(f"Pre-computatioin end, execution time: {execution_time} seconds")
+print(f"Pre-computed b3dm stored in DB end, execution time: {execution_time} seconds")
 
 
 

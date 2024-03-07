@@ -7,7 +7,7 @@ from glb_generator import GLB
 from b3dm_generator import B3DM, glb_test
 
 
-def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter):
+def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object):
 
         # update position, indices in table face
         pos = []
@@ -15,9 +15,14 @@ def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter):
         indices = []
         ids = []
 
-        ### Add other attribute values
-        sql = "SELECT id, nodes, height FROM object WHERE tile_id = {0} {1} ORDER BY id".format(tile_id, sql_filter)
-    
+
+        attrib_list = list(attrib_object.keys())
+        # Convert attrib_list to a string
+        attrib_str = ", ".join(attrib_list)
+        # Generate SQL query
+        sql = "SELECT id, nodes, {0} FROM object WHERE tile_id = {1} {2} ORDER BY id".format(attrib_str, tile_id, sql_filter)
+        # print(sql)
+
         cursor.execute(sql)
         results = cursor.fetchall()
         # print(results)
@@ -32,11 +37,16 @@ def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter):
 
         height_values= [float(i[2]) for i in results]
         # print("height property list: ",height_values)
-        ### ADD other attribute values
 
-        # # "longitude", "latitude"
-        attrib_list = ["Height", "ID"]
-        json_dict = {attrib_list[0]: height_values, attrib_list[1]: list(range(len(height_values)))}
+        year_values= [float(i[3]) for i in results]
+        # print("height property list: ",height_values)
+        
+
+        # Capitalize each element in the list
+        attrib_list = [attrib.capitalize() for attrib in attrib_list]
+        # Adding "ID" to attrib_list
+        attrib_list.extend(["ID"])
+        json_dict = {attrib_list[0]: height_values, attrib_list[1]: year_values, attrib_list[-1]: list(range(len(height_values)))}
     
         properties = json_dict
         # print("properties", properties)
@@ -152,7 +162,7 @@ def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter):
         return pos, nor, indices, ids, featureTableData, batchTableData
 
 
-def fetch_tile(conn, cursor, tile_id): 
+def fetch_precomputed_tile(conn, cursor, tile_id): 
 
     # Define the SQL query with placeholders
     sql = "SELECT b3dm from tile where id = {0}".format(tile_id)
@@ -171,13 +181,13 @@ def fetch_tile(conn, cursor, tile_id):
 
 
 # 0: non-indexed; 1: indexed
-def write_tile(conn, cursor, tile_id, flag, sql_filter):
+def write_tile(conn, cursor, tile_id, flag, sql_filter, attrib_object):
 
     if flag == 0:
         # object_count  defines how the objects in this tile
         positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_info(conn, cursor, tile_id)
     else:
-        positions, normals, indices, ids, featureTableData, batchTableData =  fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter)
+        positions, normals, indices, ids, featureTableData, batchTableData =  fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object)
 
 
     # print("positions", positions)
@@ -248,7 +258,7 @@ def write_tile(conn, cursor, tile_id, flag, sql_filter):
     return 0
 
 
-def write_all_tile(conn, cursor, pre_b3dm_flag, tid_list, sql_filter):
+def write_all_tile(conn, cursor, pre_b3dm_flag, tid_list, sql_filter, attrib_object):
 
     index_flag = int(pre_b3dm_flag)
 
@@ -258,7 +268,8 @@ def write_all_tile(conn, cursor, pre_b3dm_flag, tid_list, sql_filter):
         print("Write pre-computed b3dm to DB, {0}".format(["pre-computed nonindexed b3dm", "pre-computed indexed b3dm"][index_flag]))
 
         for id in tid_list:
-            write_tile(conn, cursor, id, index_flag, sql_filter)   # 1: indexed
+
+            write_tile(conn, cursor, id, index_flag, sql_filter, attrib_object)   # 1: indexed
             # write_tile(id, 0)   # 0: non-idexed
 
     return 0
@@ -906,10 +917,9 @@ def schema_update(conn, cursor):
     DROP COLUMN polygon;
     ALTER TABLE object
     DROP COLUMN lod,
-    DROP COLUMN envelope,
     DROP COLUMN object_root;
     ALTER TABLE hierarchy
-    DROP COLUMN row_number,
+    --DROP COLUMN row_number,
     DROP COLUMN h_envelope;
     DROP table property;
     DROP table temp;
