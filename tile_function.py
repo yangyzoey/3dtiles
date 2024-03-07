@@ -20,8 +20,21 @@ def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object):
         # Convert attrib_list to a string
         attrib_str = ", ".join(attrib_list)
         # Generate SQL query
-        sql = "SELECT id, nodes, {0} FROM object WHERE tile_id = {1} {2} ORDER BY id".format(attrib_str, tile_id, sql_filter)
+        # sql = "SELECT id, nodes, {0} FROM object WHERE tile_id = {1} {2} ORDER BY id".format(attrib_str, tile_id, sql_filter)
         # print(sql)
+        sql = """
+        WITH UnnestedIDs AS (
+        SELECT object_id as oid_list, temp_tile_id
+        FROM hierarchy
+        WHERE level = (SELECT level FROM hierarchy ORDER BY level DESC LIMIT 1) AND
+        temp_tile_id = {1}
+        )
+        SELECT id, nodes, {0}  
+        FROM object 
+        WHERE id IN (SELECT unnest(oid_list) FROM UnnestedIDs) 
+        {2}
+        ORDER BY id;
+        """.format(attrib_str, tile_id, sql_filter)
 
         cursor.execute(sql)
         results = cursor.fetchall()
@@ -34,25 +47,26 @@ def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object):
         nodes_values= [i[1] for i in results]
         # print('nodes_values: ', nodes_values)
 
+        #------------------------------------------------properties----------------------------------------------------
+        ### ADD LOOP, loop attrib name, attrib type, attrib value
+        # Capitalize each element in the list
+        attrib_list = [attrib.capitalize() for attrib in attrib_list]
+        # Adding "ID" to attrib_list
+        attrib_list.extend(["ID"])
 
         height_values= [float(i[2]) for i in results]
         # print("height property list: ",height_values)
 
         year_values= [float(i[3]) for i in results]
         # print("height property list: ",height_values)
-        
 
-        # Capitalize each element in the list
-        attrib_list = [attrib.capitalize() for attrib in attrib_list]
-        # Adding "ID" to attrib_list
-        attrib_list.extend(["ID"])
         json_dict = {attrib_list[0]: height_values, attrib_list[1]: year_values, attrib_list[-1]: list(range(len(height_values)))}
     
         properties = json_dict
         # print("properties", properties)
+        #------------------------------------------------properties----------------------------------------------------
 
         object_count = len(oid_list)
-
 
         # Set the Feature Table
         json_data = {"BATCH_LENGTH": object_count }  #,"RTC_CENTER":[1215019.2111447915,-4736339.477299974,4081627.9570209784]
@@ -917,6 +931,7 @@ def schema_update(conn, cursor):
     DROP COLUMN polygon;
     ALTER TABLE object
     DROP COLUMN lod,
+    DROP COLUMN tile_id,
     DROP COLUMN object_root;
     ALTER TABLE hierarchy
     --DROP COLUMN row_number,

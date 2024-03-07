@@ -16,7 +16,6 @@ with open('input.json', 'r') as file:
 theme = "test" #"37en2" #"test" #  # "37en1"  # "37en2" # "campus_lod1"
 
 # attrib
-# attrib_object = {'height': 'float', 'year': 'int'}  
  # # "longitude", "latitude"
 
 
@@ -328,6 +327,25 @@ UPDATE object SET year = 2000 + FLOOR(RANDOM() * (2021 - 2000));
 conn.commit()
 
 
+if theme == "test":
+    #'class': 'text', 
+    #'type:': 'text', 
+    #'owner': 'text', 
+    #'tmin': int, 
+    #'tmax': int
+    cursor.execute("""
+    -- Update the columns
+    UPDATE object SET class = 'building';
+    UPDATE object SET type = 'public space';
+    UPDATE object SET owner = 'TU Delft';
+    UPDATE object SET tmin = 2000;
+    UPDATE object SET tmax = 3000;
+    """)
+    conn.commit()
+else:
+    pass
+
+
 # operation on table temp
 cursor.execute("""
 --store rotated polygon3d
@@ -442,19 +460,20 @@ UPDATE tile SET geometric_error = 0 WHERE parent_id IS NOT NULL;
 conn.commit() 
 
 
-# UPDATE tile_id in the object table
-cursor.execute("""
-WITH UnnestedIDs AS (
-    SELECT unnest(object_id) AS id, row_number
-    FROM hierarchy
-    WHERE level = (SELECT level FROM hierarchy ORDER BY level DESC LIMIT 1)
-)
-UPDATE object AS o
-SET tile_id = ui.row_number
-FROM UnnestedIDs AS ui
-WHERE o.id = ui.id;
-""")
-conn.commit() 
+# # UPDATE tile_id in the object table
+# cursor.execute("""
+# WITH UnnestedIDs AS (
+#     SELECT unnest(object_id) AS id, row_number
+#     FROM hierarchy
+#     WHERE level = (SELECT level FROM hierarchy ORDER BY level DESC LIMIT 1)
+# )
+# UPDATE object AS o
+# SET tile_id = ui.row_number
+# FROM UnnestedIDs AS ui
+# WHERE o.id = ui.id;
+# """)
+# conn.commit() 
+
 
 
 # UPDATE bounding volume for parent the tile table
@@ -490,6 +509,16 @@ update tile set content = id::text;
 """)
 conn.commit() 
 # -----------------------------------------------create tiles from hierarchy--------------------------------------------------
+
+
+
+# attemp to undound tile_id in object
+# RENAME row_num to temp_tile_id in the hierarchy table
+cursor.execute("""
+ALTER TABLE Hierarchy RENAME COLUMN row_number TO temp_tile_id;
+""")
+conn.commit() 
+
 
 
 # covert coord to node_idx, update table face.tri_node_id, object.nodes

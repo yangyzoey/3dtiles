@@ -4,7 +4,7 @@
         "cluster_number": [4,4],
         "triangulation_flag": "tesselation",
         "precomputed_b3dm": "1",
-        "attrib_object": "{'height': 'float', 'year': 'int'}", 
+        "attrib_object": "{'height': 'float', 'year': 'int', 'class': 'text', 'type': 'text', 'owner': 'text', 'tmin': 'int', 'tmax': 'int'}", 
         "filter": " "
     },
     "campus": {
