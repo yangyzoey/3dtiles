@@ -114,5 +114,5 @@ This prototype is based on https://github.com/bmmeijers/lis3d
 
 // Continue..
 Add geom_type(polygon, polygonz, etc) flag in the input.json. Put step1 SQL scripts() as a function inside tile_function/creator
-
+bbv update in mv_tile/ JSON fetch, b3dm update in table_h
 //
