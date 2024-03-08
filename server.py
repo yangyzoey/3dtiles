@@ -15,18 +15,21 @@ from tile_function import fetch_precomputed_tile, fetch_tile_indexed_info
 from dbconfig import config
 
 
-# # Load JSON file
-# with open('input.json', 'r') as file:
-#     data = json.load(file)
+# Load JSON file
+with open('input.json', 'r') as file:
+    data = json.load(file)
 
-# # specfy the dataset theme 
-# theme = "test"  # "37en2" # "campus_lod1"  #"campus"   # "37en2"
-# sql_filter = data[theme]['filter']
+# specfy the dataset theme 
+theme = "test"  # "37en2" # "campus_lod1"  #"campus"   # "37en2"
+sql_filter = data[theme]['filter']
+# Extract info
+attrib_object_str = data[theme]['attrib_object']
+attrib_object = json.loads(attrib_object_str.replace("'", "\"")) # Convert the string to a dictionary
 
-# attrib filter
-sql_filter = ""
-# attrib
-attrib_object = {'height': 'float', 'year': 'int'}  
+# # attrib filter
+# sql_filter = ""
+# # attrib
+# attrib_object = {'height': 'float', 'year': 'int'}  
 
 
 def get_db():

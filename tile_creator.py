@@ -13,7 +13,7 @@ with open('input.json', 'r') as file:
     data = json.load(file)
 
 # specfy the dataset theme 
-theme = "test" #"37en2" #"test" #  # "37en1"  # "37en2" # "campus_lod1"
+theme = "test"  #"test" #"37en2" #"test" #  # "37en1"  # "37en2" # "campus_lod1"
 
 # attrib
  # # "longitude", "latitude"

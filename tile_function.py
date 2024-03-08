@@ -35,6 +35,7 @@ def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object):
         {2}
         ORDER BY id;
         """.format(attrib_str, tile_id, sql_filter)
+        print(sql)
 
         cursor.execute(sql)
         results = cursor.fetchall()
@@ -48,19 +49,44 @@ def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object):
         # print('nodes_values: ', nodes_values)
 
         #------------------------------------------------properties----------------------------------------------------
-        ### ADD LOOP, loop attrib name, attrib type, attrib value
+   
         # Capitalize each element in the list
         attrib_list = [attrib.capitalize() for attrib in attrib_list]
         # Adding "ID" to attrib_list
-        attrib_list.extend(["ID"])
+        # attrib_list.extend(["ID"])
 
-        height_values= [float(i[2]) for i in results]
-        # print("height property list: ",height_values)
+        ### loop attrib name, attrib type, attrib value
+        json_dict = {}
+        for idx in range(len(results[0])):
+            if idx == 0 or idx == 1:
+                pass
+            else:
+                attrib = attrib_list[idx - 2]
+                # print("attrib:", attrib)
+                attrib_lower = attrib.lower()
+                attrib_type = str(attrib_object[attrib_lower])
+                print(attrib_type, type(print(attrib_type)))
+                
+                if attrib_type == 'float':
+                    values = [float(i[idx]) for i in results]
+                if attrib_type == 'int':
+                    values = [int(i[idx]) for i in results]    
+                if attrib_type == 'text':
+                    values = [str(i[idx]) for i in results]
+                else:
+                    pass
+                
+                json_dict[attrib] = values
 
-        year_values= [float(i[3]) for i in results]
-        # print("height property list: ",height_values)
+        json_dict["ID"] = list(range(len(json_dict[attrib_list[0]])))
 
-        json_dict = {attrib_list[0]: height_values, attrib_list[1]: year_values, attrib_list[-1]: list(range(len(height_values)))}
+        # height_values= [float(i[2]) for i in results]
+        # # print("height property list: ",height_values)
+
+        # year_values= [float(i[3]) for i in results]
+        # # print("height property list: ",height_values)
+
+        # json_dict = {attrib_list[0]: height_values, attrib_list[1]: year_values, attrib_list[-1]: list(range(len(height_values)))}
     
         properties = json_dict
         # print("properties", properties)
