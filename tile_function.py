@@ -878,7 +878,9 @@ def k_means(conn, cursor, cnum1, cnum2):
     ) level_1_clusters;
 
 
-    DROP TABLE IF EXISTS hierarchy;
+    DROP TABLE IF EXISTS hierarchy CASCADE;
+    --DETAIL:  物化视图 mv_tile 倚赖于 表 hierarchy
+    --HINT:  使用 DROP .. CASCADE 把倚赖对象一并删除.
 
     CREATE TABLE hierarchy AS
     SELECT (ARRAY_AGG(DISTINCT level))[1] AS level, 
@@ -933,9 +935,9 @@ def schema_update(conn, cursor):
     DROP COLUMN lod,
     DROP COLUMN tile_id,
     DROP COLUMN object_root;
-    ALTER TABLE hierarchy
-    --DROP COLUMN row_number,
-    DROP COLUMN h_envelope;
+    --ALTER TABLE hierarchy
+    --DROP COLUMN h_envelope;
+    --DROP TABLE IF EXISTS tile;
     DROP table property;
     DROP table temp;
     """)

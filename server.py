@@ -136,12 +136,15 @@ def create_app():
         # print('tileset_data:')
         # print(tileset_data,'\n')
 
-        cursor.execute("SELECT * FROM tile WHERE tileset_id = {0} and parent_id IS NULL".format(id))
+        # cursor.execute("SELECT * FROM tile WHERE tileset_id = {0} and parent_id IS NULL".format(id))
+        cursor.execute("SELECT * FROM mv_tile WHERE tileset_id = {0} and parent_id IS NULL".format(id))
         tile_data = cursor.fetchall()
         # print('tile_data: ')
         # print(tile_data,'\n')
 
-        cursor.execute("SELECT * FROM tile WHERE tileset_id = {0} and parent_id IS NOT NULL ORDER BY id LIMIT 500".format(id))
+        # cursor.execute("SELECT * FROM tile WHERE tileset_id = {0} and parent_id IS NOT NULL ORDER BY id".format(id))
+        cursor.execute("SELECT * FROM mv_tile WHERE tileset_id = {0} and parent_id IS NOT NULL ORDER BY id".format(id))
+        #  LIMIT 500???
         children_data = cursor.fetchall()
         # print('children_data: ', type(children_data))
         # print(children_data,'\n')

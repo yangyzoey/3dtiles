@@ -33,7 +33,6 @@ print("triangulation_flag: ", triangulation_flag)
 sql_filter = data[theme]['filter']
 
 
-ge_parent = 200
 
 # total time start
 total_start_time = time.time()
@@ -387,128 +386,11 @@ print(f"triangulation end, execution time: {tri_execution_time} seconds")
 # """)
 # conn.commit() 
 
-# # Create tables tile
-cursor.execute("""
-    CREATE TABLE IF NOT EXISTS tile (
-        id SERIAL PRIMARY KEY,
-        tileset_id INT,
-        parent_id INT REFERENCES tile(id),
-        bounding_volume double precision[],
-        geometric_error INT,
-        refine TEXT,
-        content TEXT,
-        b3dm BYTEA
-    )
-""")
-# BYTEA:"byte array", store binary data as a variable-length array of bytes
-conn.commit() 
-
 
 print("clustering start")
 # cluster objects to different tiles
 k_means(conn, cursor, cnum1, cnum2) 
 print("clustering end")
-
-
-# -----------------------------------------------create tiles from hierarchy--------------------------------------------------
-# INSERT statement to update the id in the tile table
-t1 = 1
-tileset = 1
-sql = "INSERT INTO tile (id, geometric_error, refine) VALUES({0}, {2}, 'ADD');\
-INSERT INTO tile (id) SELECT row_number FROM hierarchy WHERE level = 2 and row_number != 1;\
-UPDATE tile SET tileset_id = {1} WHERE id IS NOT NULL;\
-UPDATE tile SET parent_id = {0} \
-WHERE id IN (SELECT row_number FROM hierarchy WHERE level = 2) and id != 1;".format(t1,tileset, ge_parent)
-cursor.execute(sql)
-conn.commit() 
-
-
-# UPDATE bounding_volume for children in the tile table
-cursor.execute("""
-DROP TABLE IF EXISTS bv;
-
-CREATE TEMP TABLE bv AS
-SELECT
-    row_number AS tile_id,
-    h_envelope AS combined_bbx
-FROM hierarchy
-WHERE level = 2
-;
-
-UPDATE tile AS t
-SET bounding_volume = (
-SELECT
-    ARRAY[
-        (ST_XMin(combined_bbx) + ST_XMax(combined_bbx)) / 2, -- centerX
-        (ST_YMin(combined_bbx) + ST_YMax(combined_bbx)) / 2, -- centerY
-        (ST_ZMin(combined_bbx) + ST_ZMax(combined_bbx)) / 2, -- centerZ
-        (ST_XMax(combined_bbx) - ST_XMin(combined_bbx)) / 2, 0, 0, -- halfX
-		0,(ST_YMax(combined_bbx) - ST_YMin(combined_bbx)) / 2, 0, -- halfY
-		0,0,(ST_ZMax(combined_bbx) - ST_ZMin(combined_bbx)) / 2  -- halfZ
-    ]
-FROM bv
-WHERE bv.tile_id = t.id
-);
-""")
-conn.commit() 
-
-
-# UPDATE geometric_error in the tile table
-cursor.execute("""
-UPDATE tile SET geometric_error = 0 WHERE parent_id IS NOT NULL;
-""")
-conn.commit() 
-
-
-# # UPDATE tile_id in the object table
-# cursor.execute("""
-# WITH UnnestedIDs AS (
-#     SELECT unnest(object_id) AS id, row_number
-#     FROM hierarchy
-#     WHERE level = (SELECT level FROM hierarchy ORDER BY level DESC LIMIT 1)
-# )
-# UPDATE object AS o
-# SET tile_id = ui.row_number
-# FROM UnnestedIDs AS ui
-# WHERE o.id = ui.id;
-# """)
-# conn.commit() 
-
-
-
-# UPDATE bounding volume for parent the tile table
-cursor.execute("""
-DROP TABLE IF EXISTS bv_root;
-
-CREATE TEMP TABLE bv_root AS
-WITH bbx AS (
-    SELECT
-        ST_3DExtent(f.polygon) AS combined_bbx
-    FROM face AS f
-)
-SELECT
-combined_bbx
-FROM bbx;
-
-
-UPDATE tile SET
-bounding_volume = (
-SELECT
-    ARRAY[
-        (ST_XMin(combined_bbx) + ST_XMax(combined_bbx)) / 2, -- centerX
-        (ST_YMin(combined_bbx) + ST_YMax(combined_bbx)) / 2, -- centerY
-        (ST_ZMin(combined_bbx) + ST_ZMax(combined_bbx)) / 2, -- centerZ
-        (ST_XMax(combined_bbx) - ST_XMin(combined_bbx)) / 2, 0, 0, -- halfX
-		0,(ST_YMax(combined_bbx) - ST_YMin(combined_bbx)) / 2, 0, -- halfY
-		0,0,(ST_ZMax(combined_bbx) - ST_ZMin(combined_bbx)) / 2  -- halfZ
-    ]
-FROM bv_root
-);
-update tile set content = id::text;
-
-""")
-conn.commit() 
-# -----------------------------------------------create tiles from hierarchy--------------------------------------------------
 
 
 
@@ -521,11 +403,155 @@ conn.commit()
 
 
 
+# -----------------------------------------------create tiles from hierarchy--------------------------------------------------
+
+t1 = 1
+tileset = 1
+ge_parent = 200
+
+
+# sql_tile = """
+#     -- Create tables tile
+#     DROP TABLE IF EXISTS tile;
+#     CREATE TABLE IF NOT EXISTS tile (
+#         id SERIAL PRIMARY KEY,
+#         tileset_id INT,
+#         parent_id INT REFERENCES tile(id),
+#         bounding_volume double precision[],
+#         geometric_error INT,
+#         refine TEXT,
+#         content TEXT,
+#         b3dm BYTEA
+#     );
+
+# --BYTEA:"byte array", store binary data as a variable-length array of bytes
+
+
+# --UPDATE bounding_volume for children in the tile table
+# UPDATE tile AS t
+# SET bounding_volume = ARRAY[
+#     (ST_XMin(h.h_envelope) + ST_XMax(h.h_envelope)) / 2, -- centerX
+#     (ST_YMin(h.h_envelope) + ST_YMax(h.h_envelope)) / 2, -- centerY
+#     (ST_ZMin(h.h_envelope) + ST_ZMax(h.h_envelope)) / 2, -- centerZ
+#     (ST_XMax(h.h_envelope) - ST_XMin(h.h_envelope)) / 2, 0, 0, -- halfX
+#     0, (ST_YMax(h.h_envelope) - ST_YMin(h.h_envelope)) / 2, 0, -- halfY
+#     0, 0, (ST_ZMax(h.h_envelope) - ST_ZMin(h.h_envelope)) / 2 -- halfZ
+# ]
+# FROM hierarchy AS h
+# WHERE t.id = h.temp_tile_id
+# AND h.level = 2;
+
+
+# -- INSERT statement to update the id in the tile table
+# INSERT INTO tile (id, geometric_error, refine) VALUES({0}, {2}, 'ADD');
+# INSERT INTO tile (id) SELECT temp_tile_id FROM hierarchy WHERE level = 2 and temp_tile_id != 1;
+
+# UPDATE tile SET tileset_id = {1} WHERE id IS NOT NULL;
+# UPDATE tile SET parent_id = {0} 
+# WHERE id IN (SELECT temp_tile_id FROM hierarchy WHERE level = 2) and id != 1;
+
+
+# --UPDATE geometric_error in the tile table
+# UPDATE tile SET geometric_error = 0 WHERE parent_id IS NOT NULL;
+
+
+# --UPDATE bounding volume for parent the tile table
+# DROP TABLE IF EXISTS bv_root;
+
+# CREATE TEMP TABLE bv_root AS
+# WITH bbx AS (
+#     SELECT
+#     ST_3DExtent(envelope) AS combined_bbx
+#     FROM object AS f
+# )
+# SELECT
+# combined_bbx
+# FROM bbx;
+
+
+# UPDATE tile SET
+# bounding_volume = (
+# SELECT
+#     ARRAY[
+#         (ST_XMin(combined_bbx) + ST_XMax(combined_bbx)) / 2, -- centerX
+#         (ST_YMin(combined_bbx) + ST_YMax(combined_bbx)) / 2, -- centerY
+#         (ST_ZMin(combined_bbx) + ST_ZMax(combined_bbx)) / 2, -- centerZ
+#         (ST_XMax(combined_bbx) - ST_XMin(combined_bbx)) / 2, 0, 0, -- halfX
+# 		0,(ST_YMax(combined_bbx) - ST_YMin(combined_bbx)) / 2, 0, -- halfY
+# 		0,0,(ST_ZMax(combined_bbx) - ST_ZMin(combined_bbx)) / 2  -- halfZ
+#     ]
+# FROM bv_root
+# );
+# update tile set content = id::text;
+
+
+# CREATE MATERIALIZED VIEW mv_tile AS
+# SELECT *
+# FROM tile
+# ORDER BY id;
+
+# """.format(t1,tileset, ge_parent)
+# cursor.execute(sql_tile)
+# conn.commit() 
+# -----------------------------------------------create tiles from hierarchy--------------------------------------------------
+# ----------------------------------------------create mv_tile from hierarchy-------------------------------------------------
+sql_mv ="""
+--DROP TABLE IF EXISTS tile;
+DROP MATERIALIZED VIEW IF EXISTS mv_tile;
+
+
+-- create materialized view mv_tile
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_tile AS
+SELECT
+    h.temp_tile_id AS id,
+    1 AS tileset_id,
+    
+	CASE WHEN h.temp_tile_id != 1 THEN
+        1
+    ELSE
+        NULL
+    END AS parent_id,
+	
+    ARRAY[
+    (ST_XMin(h.h_envelope) + ST_XMax(h.h_envelope)) / 2, -- centerX
+    (ST_YMin(h.h_envelope) + ST_YMax(h.h_envelope)) / 2, -- centerY
+    (ST_ZMin(h.h_envelope) + ST_ZMax(h.h_envelope)) / 2, -- centerZ
+    (ST_XMax(h.h_envelope) - ST_XMin(h.h_envelope)) / 2, 0, 0, -- halfX
+    0, (ST_YMax(h.h_envelope) - ST_YMin(h.h_envelope)) / 2, 0, -- halfY
+    0, 0, (ST_ZMax(h.h_envelope) - ST_ZMin(h.h_envelope)) / 2 -- halfZ
+]
+	AS bounding_volume,
+	
+    CASE WHEN h.temp_tile_id = 1 THEN
+        200
+    ELSE
+        0
+    END AS geometric_error,
+	
+    CASE WHEN h.temp_tile_id = 1 THEN
+        'ADD'
+    ELSE
+        NULL
+	END AS refine,
+	
+    h.temp_tile_id AS content,
+    null AS b3dm
+FROM hierarchy h
+WHERE h.level = 2;
+
+
+SELECT * from mv_tile;
+"""
+cursor.execute(sql_mv)
+conn.commit() 
+# ---------------------------------------------create mv_tile from hierarchy-----------------------------------------------------------
+
 # covert coord to node_idx, update table face.tri_node_id, object.nodes
 print("Coord to node_idx start")
 start_time = time.time()
 
-sql = "SELECT id FROM tile;"
+# sql = "SELECT id FROM tile;"
+sql = "SELECT id FROM mv_tile;"
 cursor.execute(sql)
 results = cursor.fetchall()
 # print(results)
@@ -542,14 +568,14 @@ print(f"Coord to node_idx end, execution time: {execution_time} seconds")
 
 
 # pre-computed b3dm in DB
-print("Pre-computed b3dm stored in DB start")
-start_time = time.time()
+# print("Pre-computed b3dm stored in DB start")
+# start_time = time.time()
 
-write_all_tile(conn, cursor, pre_b3dm_flag, tid_list, sql_filter, attrib_object)
+# write_all_tile(conn, cursor, pre_b3dm_flag, tid_list, sql_filter, attrib_object)
 
-end_time = time.time()
-execution_time = end_time - start_time
-print(f"Pre-computed b3dm stored in DB end, execution time: {execution_time} seconds")
+# end_time = time.time()
+# execution_time = end_time - start_time
+# print(f"Pre-computed b3dm stored in DB end, execution time: {execution_time} seconds")
 
 
 
