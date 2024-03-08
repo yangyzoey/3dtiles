@@ -963,9 +963,9 @@ def schema_update(conn, cursor):
     DROP COLUMN object_root;
     --ALTER TABLE hierarchy
     --DROP COLUMN h_envelope;
-    --DROP TABLE IF EXISTS tile;
-    DROP table property;
-    DROP table temp;
+    DROP TABLE IF EXISTS tile;
+    DROP table IF EXISTS property;
+    DROP table IF EXISTS temp;
     """)
     conn.commit() 
     # cursor.close()

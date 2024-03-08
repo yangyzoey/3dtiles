@@ -129,7 +129,6 @@ def create_app():
         # database connection
         conn = get_db()
 
-
         id = 1
         # Create a cursor object
         cursor = conn.cursor()
