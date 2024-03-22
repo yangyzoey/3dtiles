@@ -7,21 +7,12 @@ from glb_generator import GLB
 from b3dm_generator import B3DM, glb_test
 
 
-def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object):
-
-        # update position, indices in table face
-        pos = []
-        nor = []
-        indices = []
-        ids = []
-
+def fetch_tile(conn, cursor, tile_id, index_flag, sql_filter, attrib_object):
 
         attrib_list = list(attrib_object.keys())
         # Convert attrib_list to a string
         attrib_str = ", ".join(attrib_list)
-        # Generate SQL query
-        # sql = "SELECT id, nodes, {0} FROM object WHERE tile_id = {1} {2} ORDER BY id".format(attrib_str, tile_id, sql_filter)
-        # print(sql)
+ 
         sql = """
         WITH UnnestedIDs AS (
         SELECT object_id as oid_list, temp_tile_id
@@ -35,7 +26,7 @@ def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object):
         {2}
         ORDER BY id;
         """.format(attrib_str, tile_id, sql_filter)
-        print(sql)
+        # print(sql)
 
         cursor.execute(sql)
         results = cursor.fetchall()
@@ -44,65 +35,120 @@ def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object):
         oid_list= [int(i[0]) for i in results]
         # print("tile No.{} object_id list: ".format(tile_id),oid_list)
 
-
         nodes_values= [i[1] for i in results]
         # print('nodes_values: ', nodes_values)
 
-        #------------------------------------------------properties----------------------------------------------------
-   
-        # Capitalize each element in the list
-        attrib_list = [attrib.capitalize() for attrib in attrib_list]
-        # Adding "ID" to attrib_list
-        # attrib_list.extend(["ID"])
+        # -----------------------------------------gltf start--------------------------------
+        glbBytesData = compose_gltf(conn, cursor, tile_id, oid_list, nodes_values, index_flag)
+        # -----------------------------------------gltf end--------------------------------
 
-        ### loop attrib name, attrib type, attrib value
-        json_dict = {}
-        for idx in range(len(results[0])):
-            if idx == 0 or idx == 1:
-                pass
-            else:
-                attrib = attrib_list[idx - 2]
-                # print("attrib:", attrib)
-                attrib_lower = attrib.lower()
-                attrib_type = str(attrib_object[attrib_lower])
-                print(attrib_type, type(print(attrib_type)))
-                
-                if attrib_type == 'float':
-                    values = [float(i[idx]) for i in results]
-                if attrib_type == 'int':
-                    values = [int(i[idx]) for i in results]    
-                if attrib_type == 'text':
-                    values = [str(i[idx]) for i in results]
-                else:
-                    pass
-                
-                json_dict[attrib] = values
+        #-------------------------------------------featureTable,batchTable start------------------
+        featureTableData, batchTableData = compose_featureTable_batchTable(oid_list, attrib_object, results)
+        #-------------------------------------------featureTable,batchTable end----------------------------------------------------
 
-        json_dict["ID"] = list(range(len(json_dict[attrib_list[0]])))
+        conn.commit()
 
-        # height_values= [float(i[2]) for i in results]
-        # # print("height property list: ",height_values)
+        # # test
+        # featureTableData, batchTableData = None, None 
 
-        # year_values= [float(i[3]) for i in results]
-        # # print("height property list: ",height_values)
-
-        # json_dict = {attrib_list[0]: height_values, attrib_list[1]: year_values, attrib_list[-1]: list(range(len(height_values)))}
-    
-        properties = json_dict
-        # print("properties", properties)
-        #------------------------------------------------properties----------------------------------------------------
-
-        object_count = len(oid_list)
-
-        # Set the Feature Table
-        json_data = {"BATCH_LENGTH": object_count }  #,"RTC_CENTER":[1215019.2111447915,-4736339.477299974,4081627.9570209784]
-        featureTableData = json.dumps(json_data, separators=(',', ':'))
-        # Set the Batch Table data
-        batchTableData = json.dumps(properties, separators=(',', ':'))
+        return glbBytesData, featureTableData, batchTableData
 
 
+def fetch_featureTable_batchTable(conn, cursor, tile_id, sql_filter, attrib_object):
+    attrib_list = list(attrib_object.keys())
+    # Convert attrib_list to a string
+    attrib_str = ", ".join(attrib_list)
+
+    sql = """
+    WITH UnnestedIDs AS (
+    SELECT object_id as oid_list, temp_tile_id
+    FROM hierarchy
+    WHERE level = (SELECT level FROM hierarchy ORDER BY level DESC LIMIT 1) AND
+    temp_tile_id = {1}
+    )
+    SELECT id, nodes, {0}  
+    FROM object 
+    WHERE id IN (SELECT unnest(oid_list) FROM UnnestedIDs) 
+    {2}
+    ORDER BY id;
+    """.format(attrib_str, tile_id, sql_filter)
+    # print(sql)
+
+    cursor.execute(sql)
+    results = cursor.fetchall()
+    # print(results)
+
+    oid_list= [int(i[0]) for i in results]
+    # print("tile No.{} object_id list: ".format(tile_id),oid_list)
+
+
+    #-------------------------------------------featureTable,batchTable start------------------
+    featureTableData, batchTableData = compose_featureTable_batchTable(oid_list, attrib_object, results)
+    #-------------------------------------------featureTable,batchTable end----------------------------------------------------
+
+    conn.commit()
+
+    return featureTableData, batchTableData
+
+
+def compose_gltf(conn, cursor, tile_id, oid_list, nodes_values, index_flag):
+    # update position, indices in table face
+    pos = []
+    nor = []
+    indices = []
+    ids = []
+
+    if index_flag == 0:
         object_vert_total = 0
-        
+        for idx, object_id in enumerate(oid_list):
+            
+            sql = "SELECT normal, tri_node_id FROM face \
+            where object_id = {0} and tri_node_id is not null \
+            ORDER BY id;".format(object_id)
+            # print(sql)
+            cursor.execute(sql)
+
+            res = cursor.fetchall()
+            # print(res)
+
+            coord = nodes_values[idx]
+
+            pos_list = []
+            nor_list = []
+
+            for item in res:
+                
+                tri_node_id = item[1]
+                
+                # print('tri_node_id: ', tri_node_id)
+
+                p = [coord[i] for i in tri_node_id]
+                # p = [[round(num) for num in sublist] for sublist in p]
+                # print('p repos: ', p)
+                # print('\n')
+
+                n = [item[0]]*len(p)
+                
+                pos_list.extend(p)
+                nor_list.extend(n)
+            
+            ids_list = [idx]*len(pos_list)
+            # print("pos_list: ", len(pos_list), pos_list)
+            # print("nor_list: ", len(nor_list), nor_list)
+            # print("ids_list: ", len(ids_list), ids_list)
+
+
+            pos.extend(pos_list)
+            nor.extend(nor_list)
+            ids.extend(ids_list)
+        indices = list(range(len(pos)))
+        # print("\npos: ", len(pos), pos)
+        # print("\nnor: ", len(nor),nor)
+        # print("\nindices: ", len(indices))
+        # print("\nids: ", len(ids),ids)
+
+    if index_flag == 1:
+        object_vert_total = 0
         for idx, object_id in enumerate(oid_list):
             
             sql = "SELECT normal, tri_node_id FROM face \
@@ -137,7 +183,7 @@ def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object):
                 index_array = np.array(index) + np.array(len(index)*[face_vert_total])
                 idx_list = index_array.tolist()
                 # print('index after: ', idx_list)
- 
+
                 n = [item[0]]*len(p_unique)
                 # positions in a face:
                 # step1: find unique positions 
@@ -167,72 +213,11 @@ def fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object):
             ids.extend(ids_list)
             indices.extend(idx_list)
             object_vert_total = len(pos)
-        # indices = list(range(len(pos)))
-
 
         # print("\npos: ", len(pos), pos)
         # print("\nnor: ", len(nor), nor)
         # print("\nindices: ", len(indices), indices)
         # print("\nids: ", len(ids), ids)
-
-
-
-        # positions = pos
-        # ids = ids
-        # normals = nor
-        # indices = indices
-        # rgb = [1, 0.75, 0.8, 1]
-        # # Initialization and generate the glTF file
-        # glb_generator = GLB()
-        # glb_bytes = glb_generator.draw_glb(positions, normals, ids, indices, rgb)
-        # glb_generator.export_gltf_file(positions, normals, ids, indices, rgb, "1125output.json")
-        # write_path = "1125draw.glb"
-        # with open(write_path, 'wb') as glb_f:
-        #     glb_f.write(glb_bytes)
-
-
-        conn.commit() 
-        # cursor.close()
-        # conn.close()    # Close the database connection
-
-        # test
-        # featureTableData, batchTableData = None, None
-
-
-        return pos, nor, indices, ids, featureTableData, batchTableData
-
-
-def fetch_precomputed_tile(conn, cursor, tile_id): 
-
-    # Define the SQL query with placeholders
-    sql = "SELECT b3dm from tile where id = {0}".format(tile_id)
-    cursor.execute(sql)
-
-    print("fetch tile successfully: {0}".format(tile_id))
-
-    results = cursor.fetchall()
-    bytes = results[0][0]
-
-    conn.commit() 
-    # cursor.close()
-    # conn.close()    # Close the database connection
-
-    return bytes
-
-
-# 0: non-indexed; 1: indexed
-def write_tile(conn, cursor, tile_id, flag, sql_filter, attrib_object):
-
-    if flag == 0:
-        # object_count  defines how the objects in this tile
-        positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_info(conn, cursor, tile_id)
-    else:
-        positions, normals, indices, ids, featureTableData, batchTableData =  fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object)
-
-
-    # print("positions", positions)
-    # print("normals", normals)
-
 
     # List of 20 unique colors in GLB-compatible format
     colors = [
@@ -259,13 +244,76 @@ def write_tile(conn, cursor, tile_id, flag, sql_filter, attrib_object):
     ]*150
 
     rgb = colors[tile_id]
+    print("\ntile No.{} rgb: ".format(tile_id), rgb)
+    print("\n")
 
-    # Create an instance of the B3DM class
-    b3dm = B3DM()
+
     # Set glb data
     # Initialization and generate the glTF file
     glb_generator = GLB()
-    glbBytesData = glb_generator.draw_glb(positions, normals, ids, indices, rgb)
+    glbBytesData = glb_generator.draw_glb(pos, nor, ids, indices, rgb)
+
+    conn.commit()
+
+    return glbBytesData
+
+
+def compose_featureTable_batchTable(oid_list, attrib_object, results):
+    #------------------------------------------------featureTable start------------------
+    object_count = len(oid_list)
+    # Set the Feature Table
+    json_data = {"BATCH_LENGTH": object_count }  #,"RTC_CENTER":[1215019.2111447915,-4736339.477299974,4081627.9570209784]
+    featureTableData = json.dumps(json_data, separators=(',', ':'))
+    #------------------------------------------------featureTable end--------------------
+
+    #------------------------------------------------batchTable start--------------------
+    # Capitalize each element in the list
+    Cap_attrib_list = [attrib.capitalize() for attrib in list(attrib_object.keys())]
+    # Adding "ID" to Cap_attrib_list
+    # Cap_attrib_list.extend(["ID"])
+
+    ### loop attrib name, attrib type, attrib value
+    json_dict = {}
+    for idx in range(len(results[0])):
+        if idx == 0 or idx == 1:
+            pass
+        else:
+            attrib = Cap_attrib_list[idx - 2]
+            # print("attrib:", attrib)
+            attrib_lower = attrib.lower()
+            attrib_type = str(attrib_object[attrib_lower])
+            # print(attrib_type, type(attrib_type))
+            
+            if attrib_type == 'float':
+                values = [float(i[idx]) for i in results]
+            if attrib_type == 'int':
+                values = [int(i[idx]) for i in results]    
+            if attrib_type == 'text':
+                values = [str(i[idx]) for i in results]
+            else:
+                pass
+            
+            json_dict[attrib] = values
+
+    json_dict["ID"] = list(range(len(json_dict[Cap_attrib_list[0]])))
+
+    properties = json_dict
+    # print("properties", properties)
+
+    # Set the Batch Table data
+    batchTableData = json.dumps(properties, separators=(',', ':'))
+    #------------------------------------------------batchTable end--------------------
+
+
+    return featureTableData, batchTableData
+
+
+def write_b3dm(conn, cursor, tile_id, index_flag, sql_filter, attrib_object):
+
+    glbBytesData, featureTableData, batchTableData = fetch_tile(conn, cursor, tile_id, index_flag, sql_filter, attrib_object)
+
+    # Create an instance of the B3DM class
+    b3dm = B3DM()
     # generate b3dm
     b3dm_bytes = b3dm.draw_b3dm(featureTableData, batchTableData, glbBytesData)
 
@@ -281,38 +329,56 @@ def write_tile(conn, cursor, tile_id, flag, sql_filter, attrib_object):
     # with open(write_path, 'wb') as b3dm_f:
     #     b3dm_f.write(output)
 
-
-    # Define the SQL query with placeholders
-    sql = "UPDATE tile SET b3dm = %s WHERE id = %s"
-    # Provide the values for the placeholders as a tuple
+    sql = "UPDATE hierarchy SET b3dm = %s WHERE temp_tile_id = %s and level = 2"
     values = (b3dm_bytes, tile_id)
-    # Execute the query with the provided values
     cursor.execute(sql, values)
-
-
     print("write tile successfully: {0}".format(tile_id))
 
     conn.commit() 
-    # cursor.close()
-    # conn.close()    # Close the database connection
-    return 0
-
-
-def write_all_tile(conn, cursor, pre_b3dm_flag, tid_list, sql_filter, attrib_object):
-
-    index_flag = int(pre_b3dm_flag)
-
-    if index_flag == -1:
-        print("No pre-computed b3dm")
-    else:
-        print("Write pre-computed b3dm to DB, {0}".format(["pre-computed nonindexed b3dm", "pre-computed indexed b3dm"][index_flag]))
-
-        for id in tid_list:
-
-            write_tile(conn, cursor, id, index_flag, sql_filter, attrib_object)   # 1: indexed
-            # write_tile(id, 0)   # 0: non-idexed
 
     return 0
+
+
+def write_glb(conn, cursor, tile_id, index_flag, sql_filter):
+
+        sql = """
+        WITH UnnestedIDs AS (
+        SELECT object_id as oid_list, temp_tile_id
+        FROM hierarchy
+        WHERE level = (SELECT level FROM hierarchy ORDER BY level DESC LIMIT 1) AND
+        temp_tile_id = {0}
+        )
+        SELECT id, nodes 
+        FROM object 
+        WHERE id IN (SELECT unnest(oid_list) FROM UnnestedIDs) 
+        {1}
+        ORDER BY id;
+        """.format(tile_id, sql_filter)
+        # print(sql)
+
+        cursor.execute(sql)
+        results = cursor.fetchall()
+        # print(results)
+
+        oid_list= [int(i[0]) for i in results]
+        # print("tile No.{} object_id list: ".format(tile_id),oid_list)
+
+        nodes_values= [i[1] for i in results]
+        # print('nodes_values: ', nodes_values)
+
+        # -----------------------------------------gltf start--------------------------------
+        glbBytesData = compose_gltf(conn, cursor, tile_id, oid_list, nodes_values, index_flag)
+        # -----------------------------------------gltf end--------------------------------
+
+        sql = "UPDATE hierarchy SET glb = %s WHERE temp_tile_id = %s and level = 2"
+        values = (glbBytesData, tile_id)
+        cursor.execute(sql, values)
+        print("write tile successfully: {0}".format(tile_id))
+
+        conn.commit()
+
+        return 0
+
 
 
 def array_coord(conn, cursor):
@@ -884,7 +950,7 @@ def k_means(conn, cursor, cnum1, cnum2):
     INSERT INTO hierarchical_clusters (object_id, level, cluster_id, parent_cluster_id, name)
     SELECT object_id, 1 AS level, cid AS cluster_id, NULL AS parent_cluster_id, 'Level_0_Cluster_' || cid AS name
     FROM (
-        SELECT ST_ClusterKMeans(cc, {})  OVER()  AS cid, id as object_id, cc
+        SELECT ST_ClusterKMeans(cc, {0})  OVER()  AS cid, id as object_id, cc
         FROM temp_centroids AS obj
     ) level_0_clusters;
 
@@ -895,7 +961,7 @@ def k_means(conn, cursor, cnum1, cnum2):
     SELECT object_id, 2 AS level, cid AS cluster_id, parent_cluster_id, 'Level_1_Cluster_' || parent_cluster_id || '_SubCluster_' || cid AS name
     FROM (
         SELECT 
-            ST_ClusterKMeans(o.cc, {}) OVER(PARTITION BY t.cluster_id ORDER BY t.cluster_id) AS cid, 
+            ST_ClusterKMeans(o.cc, {1}) OVER(PARTITION BY t.cluster_id ORDER BY t.cluster_id) AS cid, 
             id AS object_id, 
             t.cluster_id AS parent_cluster_id
         FROM hierarchical_clusters t
@@ -903,19 +969,18 @@ def k_means(conn, cursor, cnum1, cnum2):
         WHERE t.level = 1 -- Consider removing specific Cluster_id filter here
     ) level_1_clusters;
 
-
     DROP TABLE IF EXISTS hierarchy CASCADE;
-    --DETAIL:  物化视图 mv_tile 倚赖于 表 hierarchy
-    --HINT:  使用 DROP .. CASCADE 把倚赖对象一并删除.
+    --DETAIL:  view vw_tile depends on table hierarchy
+    --HINT:  Use DROP .. CASCADE to    delete dependent objects altogether
 
     CREATE TABLE hierarchy AS
     SELECT (ARRAY_AGG(DISTINCT level))[1] AS level, 
     ARRAY_AGG(object_id) AS object_id,
-    (ARRAY_AGG(DISTINCT cluster_id))[1] AS cluster_id,
+    (ARRAY_AGG(DISTINCT cluster_id))[1] AS cluster_id,   
     (ARRAY_AGG(DISTINCT parent_cluster_id))[1] AS parent_cluster_id,
     --ST_AsText(ST_Collect(envelope))
-    ST_Extent(envelope) AS envelope, 
-    ST_3DExtent(envelope) AS h_envelope
+    --ST_Extent(envelope) AS envelope, 
+    ST_3DExtent(envelope) AS envelope
     FROM hierarchical_clusters 
     JOIN object
     on object.id = object_id
@@ -957,14 +1022,9 @@ def schema_update(conn, cursor):
     DROP COLUMN pos_idx_test,
     DROP COLUMN if_planar,
     DROP COLUMN polygon;
-    ALTER TABLE object
-    DROP COLUMN lod,
-    DROP COLUMN tile_id,
-    DROP COLUMN object_root;
     --ALTER TABLE hierarchy
     --DROP COLUMN h_envelope;
     DROP TABLE IF EXISTS tile;
-    DROP table IF EXISTS property;
     DROP table IF EXISTS temp;
     """)
     conn.commit() 
@@ -992,127 +1052,18 @@ def input_data(conn, cursor, object_table, face_table):
     """
     INSERT INTO object (id)
     SELECT id
-    FROM {};
+    FROM {0};
     INSERT INTO face (id, object_id, polygon)
     SELECT id, object_id, polygon
-    FROM {}
+    FROM {1}
     ORDER BY id;
     """.format(object_table, face_table)
     )
-
 
     conn.commit() 
     # cursor.close()
     # conn.close()   
     return 0 
-
-
-
-# to be updated
-# def fetch_tile_info(conn, cursor, tile_id):
-
-#         # update position, indices in table face
-#         pos = []
-#         nor = []
-#         indices = []
-#         ids = []
-
-
-#         sql = "SELECT id, nodes, height FROM object WHERE tile_id = {0} ORDER BY id".format(tile_id)
-#         cursor.execute(sql)
-#         results = cursor.fetchall()
-#         # print(results)
-
-#         oid_list= [int(i[0]) for i in results]
-#         # print("tile No.{} object_id list: ".format(tile_id),oid_list)
-
-
-#         # # for test purpose, can be set as 1
-#         # oid_list = [7035064, 8683138, 7037093, 6215444, 7042150, 7042095, 760994, 6200408]
-
-
-#         height_values= [float(i[2]) for i in results]
-#         # print("height property list: ",height_values)
-
-
-#         nodes_values= [i[1] for i in results]
-#         # print('nodes_values: ', nodes_values)
-
-
-#         # # "longitude", "latitude"
-#         attrib_list = ["Height", "ID"]
-#         json_dict = {attrib_list[0]: height_values, attrib_list[1]: list(range(len(height_values)))}
-#         # print('')
-#         properties = json_dict
-#         # print("properties", properties)
-
-#         object_count = len(oid_list)
-
-
-#         # Set the Feature Table
-#         json_data = {"BATCH_LENGTH": object_count }  #,"RTC_CENTER":[1215019.2111447915,-4736339.477299974,4081627.9570209784]
-#         featureTableData = json.dumps(json_data, separators=(',', ':'))
-#         # Set the Batch Table data
-#         batchTableData = json.dumps(properties, separators=(',', ':'))
-
-
-#         object_vert_total = 0
-#         for idx, object_id in enumerate(oid_list):
-            
-#             sql = "SELECT normal, tri_node_id FROM face \
-#             where object_id = {0} and tri_node_id is not null \
-#             ORDER BY id;".format(object_id)
-#             # print(sql)
-#             cursor.execute(sql)
-
-#             res = cursor.fetchall()
-#             # print(res)
-
-#             coord = nodes_values[idx]
-
-#             pos_list = []
-#             nor_list = []
-
-#             for item in res:
-                
-#                 tri_node_id = item[1]
-                
-#                 # print('tri_node_id: ', tri_node_id)
-
-#                 p = [coord[i] for i in tri_node_id]
-#                 # p = [[round(num) for num in sublist] for sublist in p]
-#                 # print('p repos: ', p)
-#                 # print('\n')
-
-#                 n = [item[0]]*len(p)
-                
-#                 pos_list.extend(p)
-#                 nor_list.extend(n)
-            
-#             ids_list = [idx]*len(pos_list)
-#             # print("pos_list: ", len(pos_list), pos_list)
-#             # print("nor_list: ", len(nor_list), nor_list)
-#             # print("ids_list: ", len(ids_list), ids_list)
-
-
-#             pos.extend(pos_list)
-#             nor.extend(nor_list)
-#             ids.extend(ids_list)
-#         indices = list(range(len(pos)))
-#         # print("\npos: ", len(pos), pos)
-#         # print("\nnor: ", len(nor),nor)
-#         # print("\nindices: ", len(indices))
-#         # print("\nids: ", len(ids),ids)
-
-
-#         conn.commit() 
-#         cursor.close()
-#         conn.close()    # Close the database connection
-
-
-#         return pos, nor, indices, ids, featureTableData, batchTableData
-
-
 
 
 
@@ -1154,24 +1105,6 @@ def input_data(conn, cursor, object_table, face_table):
 # )
 
 
-# # delft 37en2, set id and object_id for test
-# cursor.execute(
-# """
-# INSERT INTO object (id)
-# SELECT id
-# FROM object_37en2
-# WHERE id IN (7035064, 8683138, 7037093, 7042150, 7042095) --(7035064)
-# ;
-# INSERT INTO face (id, object_id, polygon)
-# SELECT id, object_id, polygon
-# FROM face_37en2
-# WHERE object_id IN (7035064, 8683138, 7037093, 7042150, 7042095) --(7035064)
-# ORDER BY id;
-# """
-# )
-
-
-
 
 if __name__ == "__main__":
   
@@ -1186,7 +1119,7 @@ if __name__ == "__main__":
     # print(type(indices[0]))
 
     # first, write bytes, then, fetch bytes
-    # write_tile(tile_id)
+    # write_b3dm(tile_id)
     # fetch_tile(tile_id)
 
 
@@ -1250,3 +1183,5 @@ if __name__ == "__main__":
     # write_path = "test_b3dm/zoeyyy_test_table.b3dm"
     # with open(write_path, 'wb') as b3dm_f:
     #         b3dm_f.write(output)
+
+

@@ -10,26 +10,10 @@ from sqlalchemy import create_engine
 from glb_generator import GLB
 from b3dm_generator import B3DM, glb_test
 
-from tile_function import fetch_precomputed_tile, fetch_tile_indexed_info
+from tile_function import fetch_tile, fetch_featureTable_batchTable
 
 from dbconfig import config
-
-
-# Load JSON file
-with open('input.json', 'r') as file:
-    data = json.load(file)
-
-# specfy the dataset theme 
-theme = "test"  # "37en2" # "campus_lod1"  #"campus"   # "37en2"
-sql_filter = data[theme]['filter']
-# Extract info
-attrib_object_str = data[theme]['attrib_object']
-attrib_object = json.loads(attrib_object_str.replace("'", "\"")) # Convert the string to a dictionary
-
-# # attrib filter
-# sql_filter = ""
-# # attrib
-# attrib_object = {'height': 'float', 'year': 'int'}  
+from tile_creator import tiles_creator
 
 
 def get_db():
@@ -39,9 +23,24 @@ def get_db():
     return g.db
 
 
-def create_app():
+def create_app(dataset_theme):
     app = Flask(__name__)
 
+    # Load JSON file
+    with open('input.json', 'r') as file:
+        data = json.load(file)
+
+    
+    # Extract info
+    theme_data = data[dataset_theme]
+    attrib_object_str = theme_data['property']
+    attrib_object = json.loads(attrib_object_str.replace("'", "\"")) # Convert the string to a dictionary
+    sql_filter = theme_data['filter']
+    index_flag = int(theme_data['index_flag']) 
+    b3dm_flag = int(theme_data["b3dm_flag"])
+    glb_flag = int(theme_data["glb_flag"])
+
+    
     conn_params = config()
     app.config["postgreSQL_pool"] = pool.SimpleConnectionPool(
         1,
@@ -60,8 +59,6 @@ def create_app():
             print("Closing DbConnection")
             app.config["postgreSQL_pool"].putconn(db)
 
-
-    # # https: // github.com / CesiumGS / cesium / wiki / CesiumJS - Features - Checklist
     # @app.route("/Cesium-1.91/<path:name>")
     # def ui(name):
     #     print("ui route")
@@ -106,8 +103,6 @@ def create_app():
     def index():
         print("Index route")
         
-
-
         # with open("index.html", "r") as file:
         #     html_content = file.read()
         #
@@ -129,121 +124,34 @@ def create_app():
         # database connection
         conn = get_db()
 
-        id = 1
+        tileset_id = 1
         # Create a cursor object
         cursor = conn.cursor()
-        # Fetch data from the database
-        # cursor.execute("SELECT * FROM tileset WHERE id = {0}".format(id))
-        # tileset_data = cursor.fetchone()
-        # print('tileset_data:')
-        # print(tileset_data,'\n')
 
-        # cursor.execute("SELECT * FROM tile WHERE tileset_id = {0} and parent_id IS NULL".format(id))
-        cursor.execute("SELECT * FROM mv_tile WHERE tileset_id = {0} and parent_id IS NULL".format(id))
-        tile_data = cursor.fetchall()
-        # print('tile_data: ')
-        # print(tile_data,'\n')
-
-        # cursor.execute("SELECT * FROM tile WHERE tileset_id = {0} and parent_id IS NOT NULL ORDER BY id".format(id))
-        cursor.execute("SELECT * FROM mv_tile WHERE tileset_id = {0} and parent_id IS NOT NULL ORDER BY id".format(id))
-        #  LIMIT 500???
-        children_data = cursor.fetchall()
-        # print('children_data: ', type(children_data))
-        # print(children_data,'\n')
-
-        # Structure the fetched data into a JSON structure
-        # tileset, tile
-        tileset_json = {
-            "asset": 
-                # tileset_data[1]
-                {
-                "version": "1.0",
-                "tilesetVersion": "1.2.3"
-                }
-            ,
-            "properties":
-                # tileset_data[2]
-                {
-                "Height": {}
-                }
-            , 
-            "geometricError": 200, #float(   _data[3]), 
-            "root": {
-                "boundingVolume": {
-                    "box": [float(pt) for pt in tile_data[0][3]] #[float(pt) for pt in tileset_data[4]]  
-                },
-                "geometricError": float(tile_data[0][4]), 
-                "refine": tile_data[0][5],
-                "content": {
-                    "boundingVolume": {
-                    "box": [float(pt) for pt in tile_data[0][3]]  
-                }
-                },
-                "children": []
-            }
-        }
-        # print(tileset_json)
-        # Check if tile_data[0][6] is not null
-        if tile_data[0][6] is not None:
-            tileset_json["root"]["content"]["uri"] = url_for('tiles_one_tile', tile_name = tile_data[0][0]) 
+        #-----------------------------------------------------file
+        # # load the JSON file
+        # read_path = "WEBtest_b3dm/tileset.json"
+        # with open(read_path, "r") as json_file:
+        #     tileset_json = json.load(json_file)
+        #-----------------------------------------------------file
 
 
-        # Add child to the root
-        for child_data in children_data:
-            child_tile = {
-                "boundingVolume": {
-                    "box": [float(pt) for pt in child_data[3]] 
-                },
-                "geometricError": float(child_data[4]), 
-                "content": {
-                    "uri":  url_for('tiles_one_tile', tile_name = child_data[0]) #url_for('tiles_one_tile')
-                }
-            }
-            tileset_json["root"]["children"].append(child_tile)
-        #     print(child_tile, "\n")
+        #------------------------------------------------------vw
+        cursor.execute("SELECT tileset_json FROM vw_tileset WHERE id = {0};".format(tileset_id))
+        vw_tileset = cursor.fetchall()
+        tileset_json = vw_tileset[0][0]
+        # print('json type', type(tileset_json))
+        #------------------------------------------------------vw
 
-        formatted_json = json.dumps(tileset_json, indent=4)
-        print("tileset_json: \n", formatted_json, "\n")
-        # print("tileset_json type: ", type(tileset_json))
-
-        # write json file
-        # output = formatted_json
-        # write_path = "test_b3dm/{}.json".format('tileset')
-        # with open(write_path, "w") as json_file:
-        #     json.dump(output, json_file)
-
+        # write dictionary to file with indentation
+        data = tileset_json
+        write_path = "WEBtest_b3dm/{}.json".format('tileset')
+        with open(write_path, "w") as json_file:
+            json.dump(data, json_file, indent=4)
 
         contents = tileset_json
 
         return jsonify(contents)
-
-
-    # # tile_name
-    # # <string:tile_name> # url_for('tiles_one_tile', tile_name = "parent")
-    # # <int:tile_name> # url_for('tiles_one_tile', tile_name = 1)
-    # @app.route("/tiles/<string:tile_name>.glb")  
-    # def tiles_one_tile(tile_name):
-    #     #------------------------------------------dataset-----------------------------------------------
-    #     #positions, normals, ids, indices = read_data("data/parent_pos_nor_id.json")
-    #     #------------------------------------------dataset-----------------------------------------------
-    #     #  object_count  defines how the objects in this tile
-    #     object_count = 2
-    #     positions, normals, ids, indices = fetch_pos_nor_ids_indices(object_count)
-
-    #     # Initialization and generate the glTF file
-    #     glb_generator = GLB()
-
-    #     glb_generator.update_value(positions, normals, ids, indices)
-
-    #     glb_bytes = glb_generator.draw_glb()
-    #     #------------------------------------------dataset-----------------------------------------------
-    #     # # read from path
-    #     # glb_file_path = f"data\\{tile_name}.glb"   
-    #     # glb_bytes = read_glb(glb_file_path)
-    #     #------------------------------------------dataset end-----------------------------------------------
-    #     response = Response(glb_bytes, mimetype="application/octet-stream")
-    #     return response
-
     
 
     @app.route("/tiles/<string:tile_name>.b3dm")  
@@ -260,65 +168,53 @@ def create_app():
 
         # defines which tile
         tile_id = int(tile_name)
+        
+
+        # # ---------------------------Approach I: generate b3dm from DB start----------------------------------------
+        if b3dm_flag == -1 and glb_flag == -1:
+            glbBytesData, featureTableData, batchTableData = fetch_tile(conn, cursor, tile_id, index_flag, sql_filter, attrib_object)
+  
+            # Create an instance of the B3DM class
+            b3dm = B3DM()
+            # generate b3dm
+            b3dm_bytes = b3dm.draw_b3dm(featureTableData, batchTableData, glbBytesData)
+
+        # # ---------------------------Approach I: generate b3dm from DB end----------------------------------------
+
+        # # ----------------------Approach II: fetch pre-created b3dm from DB start-------------------------------------
+        if b3dm_flag == 1:
+            sql = "SELECT b3dm from hierarchy where temp_tile_id = {0} and level =2".format(tile_id)
+            cursor.execute(sql)
+            print("fetch tile successfully: {0}".format(tile_id))
+            results = cursor.fetchall()
+            b3dm_bytes = results[0][0]
+            conn.commit() 
+
+        # # ----------------------Approach II: fetch pre-created b3dm from DB end---------------------------------------
+  
+        # # ----------------------Approach III: fetch pre-created b3dm from DB start-------------------------------------
+        if glb_flag == 1:
+            featureTableData, batchTableData = fetch_featureTable_batchTable(conn, cursor, tile_id, sql_filter, attrib_object)
+
+            sql = "SELECT glb from hierarchy where temp_tile_id = {0} and level =2".format(tile_id)
+            cursor.execute(sql)
+            print("fetch binary gltf successfully: {0}".format(tile_id))
+            results = cursor.fetchall()
+            glbBytesData = results[0][0]
+            conn.commit() 
+
+            # Create an instance of the B3DM class
+            b3dm = B3DM()
+            # generate b3dm
+            b3dm_bytes = b3dm.draw_b3dm(featureTableData, batchTableData, glbBytesData)
+
+        # # ----------------------Approach III: fetch pre-created b3dm from DB end---------------------------------------
 
 
-        # # ----------------------Approach I: fetch pre-created b3dm from DB start-------------------------------------
-        # b3dm_bytes = fetch_precomputed_tile(conn, cursor, tile_id)
-
-        # # ----------------------Approach I: fetch pre-created b3dm from DB end---------------------------------------
-
-
-        # # ---------------------------Approach II: generate b3dm from DB start----------------------------------------
-
-        positions, normals, indices, ids, featureTableData, batchTableData = fetch_tile_indexed_info(conn, cursor, tile_id, sql_filter, attrib_object) 
-
-        # indices = None
-
-        # List of 20 unique colors in GLB-compatible format
-        colors = [
-            [0.596, 0.9843, 0.596, 1],   # Mint Green
-            [1, 0.7529, 0.7961, 1],     # Soft Pink
-            [0.6784, 0.8471, 0.902, 1], # Light Blue
-            [0.8, 0.6, 0.8, 1],         # Light Purple
-            [1, 0.6, 0.6, 1],           # Light Red
-            [1, 0.8, 0.6, 1],           # Light Orange
-            [1, 1, 0.5, 1],             # Light Yellow
-            [1, 1, 0, 1],               # Yellow
-            [0, 1, 0, 1],               # Green
-            [0, 0, 1, 1],               # Blue
-            [0.5, 0, 0.5, 1],           # Purple
-            [1, 0, 0, 1],               # Red
-            [1, 1, 1, 1],               # White
-            [0.7, 0.7, 0.7, 1],         # Gray
-            [0.9, 0.9, 0.9, 1],         # Light Gray
-            [0.6, 0.6, 1, 1],           # Lighter Blue
-            [0.6, 1, 0.6, 1],           # Lighter Green
-            [1, 0.6, 0.6, 1],           # Lighter Red
-            [1, 1, 0.6, 1],             # Lighter Yellow
-            [0, 0.7, 0.7, 1],           # Lighter Teal
-        ]*500
-
-        rgb = colors[tile_id]
-        print("\ntile No.{} rgb: ".format(tile_id), rgb)
-        print("\n")
-
-
-        # Create an instance of the B3DM class
-        b3dm = B3DM()
-        # Set glb data
-        # Initialization and generate the glTF file
-        glb_generator = GLB()
-        glbBytesData = glb_generator.draw_glb(positions, normals, ids, indices, rgb)
-        # generate b3dm
-        b3dm_bytes = b3dm.draw_b3dm(featureTableData, batchTableData, glbBytesData)
-
-        # # ---------------------------Approach II: generate b3dm from DB end----------------------------------------
-
-
-        # # --------------------------------------------Approach III: read from path-------------------------------------
-        # b3dm_file_path = f"test_b3dm\\{tile_name}.b3dm"   
+        # # --------------------------------------------Approach IV: read from path-------------------------------------
+        # b3dm_file_path = f"WEBtest_b3dm\\{tile_name}.b3dm"   
         # b3dm_bytes = read_glb(b3dm_file_path)
-        # # --------------------------------------------Approach III: read from path-------------------------------------
+        # # --------------------------------------------Approach IV: read from path-------------------------------------
 
 
         # Record the end time for this route
@@ -329,14 +225,14 @@ def create_app():
 
         # ---------------------------------write for debuging-------------------------------------------------------
         # glb_bytes = glbBytesData
-        # write_path = "test_b3dm/{}.glb".format(tile_id)
+        # write_path = "WEBtest_b3dm/{}.glb".format(tile_id)
         # with open(write_path, 'wb') as glb_f:
         #     glb_f.write(glb_bytes)
 
-        # output = b3dm_bytes
-        # write_path = "test_b3dm/{}.b3dm".format(tile_id)
-        # with open(write_path, 'wb') as b3dm_f:
-        #         b3dm_f.write(output)
+        output = b3dm_bytes
+        write_path = "WEBtest_b3dm/{}.b3dm".format(tile_id)
+        with open(write_path, 'wb') as b3dm_f:
+                b3dm_f.write(output)
         # ---------------------------------write for debuging-------------------------------------------------------
 
 
@@ -390,13 +286,28 @@ if __name__ == "__main__":
     
     import time
 
+    # specfy the dataset theme 
+    dataset_theme = "cube"  #"37en2" #"test" # "37en1"  # "37en2" # "campus_lod1"
+
+    #----------------------------------------------3D Tiles database------------------------------------------
+    # ge1 = 1000
+    # ge2 = 0
+    # refine = 'ADD'
+
+    # # total time start
+    # total_start_time = time.time()
+    
+    # tiles_creator(dataset_theme, ge1, ge2, refine)
+
+    # # total time end
+    # total_end_time = time.time()
+    # execution_time = total_end_time - total_start_time
+    # print(f"Total execution time: {execution_time} seconds")
+    #----------------------------------------------3D Tiles database------------------------------------------
+
     start_time = time.time()
 
-    # db = config(filename='database.ini', section='postgresql')
-    # # {'host': 'localhost', 'database': 'zoey', 'user': 'postgres', 'password': '120598', 'port': '5432'}
-    # print(db)
-
-    app = create_app()
+    app = create_app(dataset_theme)
     app.run(debug=True)
 
     end_time = time.time()

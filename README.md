@@ -92,17 +92,15 @@ Set up python environment (See requirements.txt)
 Compute tile information (normal, position, triangulated topology, and hierarchical structure) in the Postgres. Run the webservice and complete the tile creation. Then visualise on Cesium.
 
 ```cmd
-$ python tile_creator.py
-```
-
-```cmd
 $ python server.py
 ```
 
 Now connect with a webbrowser to the service running on your own laptop: http://127.0.0.1:5000
 
-#### Note:
-You can also add your dataset theme and change parameters in the input.json file. Then specify the dataset theme in tile_creator.py
+#### Additional Notes:
+Feel free to customize configuration for the application.
+- In the input.json file, you can modify the parameters according to your requirements.
+- In the server.py file, under the if __name__ == '__main__': block, you can change the parameter dataset_theme.
 
 
 ## Result:
@@ -114,10 +112,5 @@ This prototype is based on https://github.com/bmmeijers/lis3d
 
 // Continue..
 Add geom_type(polygon, polygonz, etc) flag in the input.json. 
-
-Put step1 SQL scripts() as a function inside tile_function/creator
-
-bbv update in mv_tile/ JSON fetch
-
-b3dm update in table_h
+Put step1 SQL scripts() as a function inside creator
 //
