@@ -43,24 +43,23 @@ const viewModel = {
       name: "Tileset",
       resource:
       '/tiles/tileset.json',
-        //"/Cesium-1.110/zoeydata/Tileset/tilesetTest.json",
     },
   ],
   selectedTileset: undefined,
   shadows: true,
 };
 
-
 /*
+//加载地图
 //获取默认情况下图层数组容器，默认length=1 或者 viewer.scene.imageryLayers
 var layers = viewer.imageryLayers._layers;
 
 //将第一个影像图层设置为隐藏 下标0
-viewer.scene.imageryLayers.get(0).show = false;
+viewer.scene.imageryLayers.get(0).show = true; //false;
 
 //隐藏了唯一的一个影像图层，地球变成一个蓝色的圆球
 //可以通过下面的命令将无图层服务的蓝色圆球变成WHITE or BLACK
-viewer.scene.globe.baseColor = Cesium.Color.BLACK;
+//viewer.scene.globe.baseColor = Cesium.Color.BLACK;
 */
 
 
@@ -97,8 +96,28 @@ Cesium.knockout
         // Another tileset was loaded. Discard the result.
         return;
       }
+  
+
       viewer.scene.primitives.add(tileset);
 
+/*
+//设置数据位置和方向
+//根据经纬度生成transform
+//给到数据的root.transform
+
+    tileset.readyPromise.then(function(){
+    var longitude = 2.254825261091031;
+    var latitude = 0.6138864903996801;
+    var height = 0.0;
+    var cartesian = Cesium.Cartesian3.fromDegrees(longitude, latitude, height);
+    var transform = Cesium.Transforms.eastNorthUpToFixedFrame(cartesian);
+    
+    tileset._root.transform = transform; //根节点变换矩阵 //Cesium.Matrix4.IDENTITY;
+    //tileset.modelMatrix = transform; 
+});
+*/
+
+        //the camera's heading, pitch, and range
       inspectorViewModel.tileset = tileset;
       viewer.zoomTo(
         tileset,

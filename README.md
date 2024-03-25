@@ -111,6 +111,4 @@ Feel free to customize configuration for the application.
 This prototype is based on https://github.com/bmmeijers/lis3d
 
 // Continue..
-Add geom_type(polygon, polygonz, etc) flag in the input.json. 
-Put step1 SQL scripts() as a function inside creator
-//
+Explain geom_type(polygon, polygonz, etc) description in the input.json. 

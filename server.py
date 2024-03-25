@@ -173,7 +173,8 @@ def create_app(dataset_theme):
         # # ---------------------------Approach I: generate b3dm from DB start----------------------------------------
         if b3dm_flag == -1 and glb_flag == -1:
             glbBytesData, featureTableData, batchTableData = fetch_tile(conn, cursor, tile_id, index_flag, sql_filter, attrib_object)
-  
+
+            print("Approach 1: dynamic b3dm creation successfully: {0}".format(tile_id))
             # Create an instance of the B3DM class
             b3dm = B3DM()
             # generate b3dm
@@ -181,24 +182,13 @@ def create_app(dataset_theme):
 
         # # ---------------------------Approach I: generate b3dm from DB end----------------------------------------
 
-        # # ----------------------Approach II: fetch pre-created b3dm from DB start-------------------------------------
-        if b3dm_flag == 1:
-            sql = "SELECT b3dm from hierarchy where temp_tile_id = {0} and level =2".format(tile_id)
-            cursor.execute(sql)
-            print("fetch tile successfully: {0}".format(tile_id))
-            results = cursor.fetchall()
-            b3dm_bytes = results[0][0]
-            conn.commit() 
-
-        # # ----------------------Approach II: fetch pre-created b3dm from DB end---------------------------------------
-  
-        # # ----------------------Approach III: fetch pre-created b3dm from DB start-------------------------------------
-        if glb_flag == 1:
+        # # ----------------------Approach II: fetch precomposed glb from DB start-------------------------------------
+        elif glb_flag == 1:
             featureTableData, batchTableData = fetch_featureTable_batchTable(conn, cursor, tile_id, sql_filter, attrib_object)
 
             sql = "SELECT glb from hierarchy where temp_tile_id = {0} and level =2".format(tile_id)
             cursor.execute(sql)
-            print("fetch binary gltf successfully: {0}".format(tile_id))
+            print("Approach 2: fetch precomposed binary gltf successfully: {0}".format(tile_id))
             results = cursor.fetchall()
             glbBytesData = results[0][0]
             conn.commit() 
@@ -208,12 +198,26 @@ def create_app(dataset_theme):
             # generate b3dm
             b3dm_bytes = b3dm.draw_b3dm(featureTableData, batchTableData, glbBytesData)
 
-        # # ----------------------Approach III: fetch pre-created b3dm from DB end---------------------------------------
+        # # ----------------------Approach II: fetch precomposed glb from DB end---------------------------------------
 
+
+        # # ----------------------Approach III: fetch precomposed b3dm from DB start-------------------------------------
+        elif b3dm_flag == 1:
+            sql = "SELECT b3dm from hierarchy where temp_tile_id = {0} and level =2".format(tile_id)
+            cursor.execute(sql)
+            print("Approach 3: fetch precomposed b3dm successfully: {0}".format(tile_id))
+            results = cursor.fetchall()
+            b3dm_bytes = results[0][0]
+            conn.commit() 
+
+        # # ----------------------Approach III: fetch precomposed b3dm from DB end---------------------------------------
+  
 
         # # --------------------------------------------Approach IV: read from path-------------------------------------
-        # b3dm_file_path = f"WEBtest_b3dm\\{tile_name}.b3dm"   
-        # b3dm_bytes = read_glb(b3dm_file_path)
+        else:
+            b3dm_file_path = f"WEBtest_b3dm\\{tile_name}.b3dm"   
+            b3dm_bytes = read_glb(b3dm_file_path)
+            print("Approach 4:read b3dm from the disk successfully: {0}".format(tile_id))
         # # --------------------------------------------Approach IV: read from path-------------------------------------
 
 
@@ -248,13 +252,9 @@ def read_glb(glb_file_path): # can also read b3dm
     try:
         # Open the GLB file in binary mode
         with open(glb_file_path, 'rb') as glb_file:
-            # Read the entire contents of the GLB file as bytes
+
             glb_bytes = glb_file.read()
 
-        # Now, 'glb_bytes' contains the binary data of the GLB file
-        # You can process, manipulate, or save these bytes as needed
-
-        # For example, you can print the length of the byte data
         print(f"GLB file size: {len(glb_bytes)} bytes")
         # print(glb_bytes)
 
@@ -287,28 +287,27 @@ if __name__ == "__main__":
     import time
 
     # specfy the dataset theme 
-    dataset_theme = "cube"  #"37en2" #"test" # "37en1"  # "37en2" # "campus_lod1"
+    dataset_theme = "test" #"cube"  #"37en2" # # "37en1"  # "37en2" # "campus_lod1"
 
     #----------------------------------------------3D Tiles database------------------------------------------
-    # ge1 = 1000
-    # ge2 = 0
-    # refine = 'ADD'
 
-    # # total time start
-    # total_start_time = time.time()
+    refine = 'ADD'
+
+    # total time start
+    total_start_time = time.time()
     
-    # tiles_creator(dataset_theme, ge1, ge2, refine)
+    tiles_creator(dataset_theme, refine)
 
-    # # total time end
-    # total_end_time = time.time()
-    # execution_time = total_end_time - total_start_time
-    # print(f"Total execution time: {execution_time} seconds")
+    # total time end
+    total_end_time = time.time()
+    execution_time = total_end_time - total_start_time
+    print(f"Total execution time: {execution_time} seconds")
     #----------------------------------------------3D Tiles database------------------------------------------
 
     start_time = time.time()
 
     app = create_app(dataset_theme)
-    app.run(debug=True)
+    app.run(debug=False) #debug=True
 
     end_time = time.time()
     execution_time = end_time - start_time

@@ -1,6 +1,19 @@
 {
     "test": {
         "description": "This is for test",
+        "lod": 2,
+        "cluster_number": [2,2],
+        "triangulation_flag": "tesselation",
+        "index_flag": "1",
+        "index_flag_description": "{'0': 'non-indexed', '1: 'indexed '}",
+        "b3dm_flag": "-1",
+        "glb_flag": "1",
+        "b3dm/glb_flag_description": "{'1': 'composed b3dm', '-1: 'no composed'}",  
+        "property": "{'height': 'float', 'construction_year': 'int', 'city': 'text'}", 
+        "filter": " "
+    },
+    "church": {
+        "description": "10-282-562",
         "cluster_number": [1,2],
         "triangulation_flag": "tesselation",
         "index_flag": "1",
@@ -17,10 +30,10 @@
         "triangulation_flag": "tesselation",
         "index_flag": "1",
         "index_flag_description": "{'0': 'non-indexed', '1: 'indexed '}",
-        "b3dm_flag": "-1",
-        "glb_flag": "1",
+        "b3dm_flag": "1",
+        "glb_flag": "-1",
         "b3dm/glb_flag_description": "{'1': 'composed b3dm', '-1: 'no composed'}",  
-        "property": "{'height': 'float', 'construction_year': 'int', 'city': 'text'}", 
+        "property": "{'height': 'float'}", 
         "filter": " "
     },
     "ladm": {
@@ -31,7 +44,7 @@
         "property": "{'height': 'float'}", 
         "filter": " "
     },
-    "campus": {
+    "campus_lod2": {
         "description": "3DBAG Campus LOD2",
         "cluster_number": [2,2],
         "triangulation_flag": "tesselation",
@@ -45,46 +58,6 @@
         "triangulation_flag": "tesselation",
         "index_flag": "-1",
         "property": "{'height': 'float', 'year': 'int'}", 
-        "filter": " "
-    },
-    "37en2": {
-        "description": "PDOK 37en2, 13.5M",
-        "cluster_number": [2,2],
-        "triangulation_flag": "mix",
-        "index_flag": "-1",
-        "property": "{'height': 'float', 'year': 'int'}", 
-        "filter": " "
-    },
-    "37ez1": {
-        "description": "PDOK 37ez1, 8.38M",
-        "cluster_number": [2,2],
-        "triangulation_flag": "mix",
-        "index_flag": "-1",
-        "property": "{'height': 'float'}", 
-        "filter": " "
-    },
-    "37ez2": {
-        "description": "PDOK 37ez2, 11.1M",
-        "cluster_number": [2,2],
-        "triangulation_flag": "mix",
-        "index_flag": "-1",
-        "property": "{'height': 'float'}", 
-        "filter": " "
-    },
-    "37en1": {
-        "description": "PDOK 37en1, 34.4M",
-        "cluster_number": [1,1],
-        "triangulation_flag": "mix",
-        "index_flag": "-1",
-        "property": "{'height': 'float'}", 
-        "filter": " "
-    },
-    "37_4": {
-        "description": "PDOK 37_4 of 4 combined files",
-        "cluster_number": [4,4],
-        "triangulation_flag": "mix",
-        "index_flag": "-1",
-        "property": "{'height': 'float'}", 
         "filter": " "
     }
 }

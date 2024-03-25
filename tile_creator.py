@@ -7,7 +7,7 @@ from tile_function import array_coord, rotate_X,rotate_Y, triangulation, k_means
 from dbconfig import config
 
 
-def tiles_creator(theme, ge1, ge2, refine):
+def tiles_creator(theme, refine):
 
     # Load JSON file
     with open('input.json', 'r') as file:
@@ -16,8 +16,8 @@ def tiles_creator(theme, ge1, ge2, refine):
 
     # Extract info
     theme_data = data[theme]
-    object_input = "object_{}".format(theme) 
-    face_input = "face_{}".format(theme) 
+    # object_input = "object_{}".format(theme) 
+    # face_input = "face_{}".format(theme) 
     attrib_object_str = theme_data['property']
     attrib_object = json.loads(attrib_object_str.replace("'", "\"")) # Convert the string to a dictionary
     cnum1, cnum2 = theme_data['cluster_number'][0], theme_data['cluster_number'][1]
@@ -26,6 +26,7 @@ def tiles_creator(theme, ge1, ge2, refine):
     index_flag = int(theme_data['index_flag']) #0: non-indexed; 1: indexed; -1: no pre-computed
     b3dm_flag = int(theme_data["b3dm_flag"])
     glb_flag = int(theme_data["glb_flag"])
+    lod_flag = int(theme_data["lod"])
     
 
     # database connection
@@ -163,14 +164,12 @@ def tiles_creator(theme, ge1, ge2, refine):
     cursor.execute(sql)
     conn.commit()
 
-
+    print("input data starts")
     # map dataset to the face table and object table
-    input_data(conn, cursor, object_input, face_input)
-
+    input_data(conn, cursor, lod_flag, theme)
+    print("input data ends")
 
     print("normalised normal start")
-
-
     # functioin compute normalised normal
     cursor.execute("""
     -- Drop the table if it exists
@@ -370,7 +369,7 @@ def tiles_creator(theme, ge1, ge2, refine):
 
     # ----------------------------------------------create vw_tile from hierarchy-------------------------------------------------
     sql_vw_tile ="""
-    CREATE OR REPLACE FUNCTION create_vw_tile(ge1 INT, ge2 INT, refine TEXT) RETURNS VOID AS $$
+    CREATE OR REPLACE FUNCTION create_vw_tile(refine TEXT) RETURNS VOID AS $$
     BEGIN
         EXECUTE 'DROP VIEW IF EXISTS vw_tile CASCADE';
 
@@ -396,7 +395,7 @@ def tiles_creator(theme, ge1, ge2, refine):
             (ST_YMin(h.envelope) + ST_YMax(h.envelope)) / 2, -- centerY
             (ST_ZMin(h.envelope) + ST_ZMax(h.envelope)) / 2, -- centerZ
             (ST_XMax(h.envelope) - ST_XMin(h.envelope)) / 2, 0, 0, -- halfX
-            0, -(ST_YMax(h.envelope) - ST_YMin(h.envelope)) / 2, 0, -- halfY
+            0, (ST_YMax(h.envelope) - ST_YMin(h.envelope)) / 2, 0, -- halfY
             0, 0, (ST_ZMax(h.envelope) - ST_ZMin(h.envelope)) / 2 -- halfZ
         ]
             ELSE
@@ -405,15 +404,22 @@ def tiles_creator(theme, ge1, ge2, refine):
             (ST_YMin(e.envelope) + ST_YMax(e.envelope)) / 2, -- centerY
             (ST_ZMin(e.envelope) + ST_ZMax(e.envelope)) / 2, -- centerZ
             (ST_XMax(e.envelope) - ST_XMin(e.envelope)) / 2, 0, 0, -- halfX
-            0, -(ST_YMax(e.envelope) - ST_YMin(e.envelope)) / 2, 0, -- halfY
+            0, (ST_YMax(e.envelope) - ST_YMin(e.envelope)) / 2, 0, -- halfY
             0, 0, (ST_ZMax(e.envelope) - ST_ZMin(e.envelope)) / 2 -- halfZ
         ] 
             END AS bounding_volume,
 
             CASE WHEN h.temp_tile_id = 1 THEN
-                ' || ge1|| '
+                ROUND(
+                sqrt(
+                    power(ST_XMax(h.envelope) - ST_XMin(h.envelope), 2) +
+                    power(ST_YMax(h.envelope) - ST_YMin(h.envelope), 2) +
+                    power(ST_ZMax(h.envelope) - ST_ZMin(h.envelope), 2)
+                )::numeric,
+                2) 
+                --diagonal_length
             ELSE
-                ' || ge2|| '
+                0
             END AS geometric_error,
 
             CASE WHEN h.temp_tile_id = 1 THEN
@@ -423,7 +429,8 @@ def tiles_creator(theme, ge1, ge2, refine):
             END AS refine,
 
             h.temp_tile_id AS content,
-            null AS b3dm
+            NULL AS glb,
+            NULL AS b3dm
         FROM hierarchy h, e
         WHERE h.level = 2
         ';
@@ -432,8 +439,8 @@ def tiles_creator(theme, ge1, ge2, refine):
     END;   
     $$ LANGUAGE plpgsql;
 
-    SELECT create_vw_tile({0}, {1}, '{2}');
-    """.format(ge1, ge2, refine)
+    SELECT create_vw_tile('{0}');
+    """.format(refine)
     cursor.execute(sql_vw_tile)
     conn.commit() 
     # ---------------------------------------------create vw_tile from hierarchy-----------------------------------------------------------
@@ -458,20 +465,28 @@ def tiles_creator(theme, ge1, ge2, refine):
                     OFFSET 3
                 ) AS property_data
             ),
-            children AS (
+			
+			children AS (
                 SELECT
-                    tile_data.id,
-                    json_agg(json_build_object(
+                    array_agg(json_build_object(
                         ''boundingVolume'', json_build_object(
                             ''box'', tile_data.bounding_volume
                         ),
                         ''geometricError'', tile_data.geometric_error,
                         ''content'', json_build_object(''uri'', CONCAT(''/tiles/'', tile_data.content, ''.b3dm''))
                     )) AS children_json
-                FROM vw_tile AS tile_data
-                WHERE tile_data.tileset_id = 1 AND tile_data.parent_id IS NOT NULL
-                GROUP BY tile_data.id
-            )
+                FROM 
+				
+					(
+					SELECT *
+					FROM vw_tile
+					WHERE tileset_id = 1 --AND tile_data.parent_id IS NOT NULL
+					 --AND tile_data.parent_id IS NOT NULL
+					ORDER BY id -- Order by tile_id
+					) AS tile_data
+				 GROUP BY tile_data.tileset_id
+				)
+  
             SELECT 
                 1 AS id,
                 json_build_object(
@@ -493,10 +508,10 @@ def tiles_creator(theme, ge1, ge2, refine):
                             ),
                             ''uri'', CONCAT(''/tiles/'', tile_data.content, ''.b3dm'')
                         ),
-                        ''children'', children.children_json,
+                        ''children'', (children.children_json)[2:],
                         ''transform'', ARRAY[1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1, 1, 1, 1.0]
                     )
-                ) AS tileset_json
+                ) AS tileset_json  
             FROM (
                 SELECT *
                 FROM vw_tile
@@ -514,7 +529,7 @@ def tiles_creator(theme, ge1, ge2, refine):
 
     -- Retrieve data from the created view
     --SELECT * FROM vw_tileset;
-    """#.format(ge1, ge2, refine)
+    """
     cursor.execute(sql_vw_tileset)
     conn.commit() 
 
@@ -585,14 +600,12 @@ if __name__ == "__main__":
 
     # specfy the dataset theme 
     theme = "test"  #"test" #"37en2" #"test" #  # "37en1"  # "37en2" # "campus_lod1"
-    ge1 = 1000
-    ge2 = 0
     refine = 'ADD'
 
     # total time start
     total_start_time = time.time()
     
-    tiles_creator(theme, ge1, ge2, refine)
+    tiles_creator(theme, refine)
 
     # total time end
     total_end_time = time.time()
