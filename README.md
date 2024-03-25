@@ -26,58 +26,6 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 $ psql -d [database_name] -U [database_host] -h localhost -f test_9-284-556.dmp
 ```
 
-#### Next, perform a coordinate transformation from EPSG:7415 (RD+NAP) to EPSG:4978. Harmonise geometries to valid polygonz. Execute script in Postgres:
-```sql
-DROP TABLE IF EXISTS test_epsg4978;
-create table test_epsg4978 as select fid as gid, st_transform(geom, 4978) as geom4978 from dbuser.test_lod12_3d;
-
---Drop object table if exists
-DROP TABLE IF EXISTS object_test;
---Create object table
-CREATE TABLE object_test AS (
-SELECT 
-	ROW_NUMBER() OVER () AS id,
-	geom4978 as geom
-	FROM test_epsg4978  
-);
-
---Drop face table if exists
-DROP TABLE IF EXISTS face_test;
---Create face table
-CREATE TABLE face_test AS (
-	SELECT 
-	ROW_NUMBER() OVER (ORDER BY (object_id, fid)) AS id,
-	object_id,
-	fid,
-	polygon
-	FROM
-		(
-		SELECT 
-		ROW_NUMBER() OVER (PARTITION BY object_id ORDER BY object_id) AS fid,
-		object_id,
-		polygon
-		FROM 
-			(
-			SELECT 
-			ROW_NUMBER() OVER () AS object_id,
-			--gid, --replace large-number gid with increamental id              
-			ST_AsText((ST_DUMP(geom)).geom) AS polygon
-			FROM object_test
-			) AS f
-		) AS ff
-) ORDER BY id;
-
--- Update geometries with SRID 0 to SRID 4978
-UPDATE face_test
-SET polygon = ST_SetSRID(polygon, 4978)
-WHERE ST_SRID(polygon) = 0;
-
--- Delete invlid polyongs
-DELETE FROM face_test
-WHERE ST_IsValid(polygon) = false;
-
-DROP TABLE test_epsg4978;
-```
 
 ### 2. Run the prototype:
 
