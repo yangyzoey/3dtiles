@@ -46,7 +46,7 @@ $ python server.py
 Now connect with a webbrowser to the service running on your own laptop: http://127.0.0.1:5000
 
 #### Additional Notes:
-Feel free to customize configuration for the application.
+Feel free to customise configuration for the application.
 - In the input.json file, you can modify the parameters according to your requirements.
 - In the server.py file, under the if __name__ == '__main__': block, you can change the parameter dataset_theme.
 
