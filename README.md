@@ -26,7 +26,6 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 $ psql -d [database_name] -U [database_host] -h localhost -f test_9-284-556.dmp
 ```
 
-
 ### 2. Run the prototype:
 
 #### Preparation
@@ -37,7 +36,9 @@ Download Cesium-1.110.zip from https://github.com/CesiumGS/cesium/releases/tag/1
 Set up python environment (See requirements.txt)
 
 #### Serve the 3D Tile on-the-fly
-Compute tile information (normal, position, triangulated topology, and hierarchical structure) in the Postgres. Run the webservice and complete the tile creation. Then visualise on Cesium.
+- Perform a coordinate transformation from EPSG:7415 (RD+NAP) to EPSG:4978, and harmonise geometries to valid polygonz. 
+- Compute and prepare 3D Tiles information (normal, position, triangulated topology, and tileset structure) 
+- Run the webservice and complete the tile creation. Then visualise on Cesium.
 
 ```cmd
 $ python server.py
