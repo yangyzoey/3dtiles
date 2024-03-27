@@ -1,63 +1,44 @@
 {
-    "test": {
-        "description": "This is for test",
-        "lod": 2,
-        "cluster_number": [2,2],
-        "triangulation_flag": "tesselation",
-        "index_flag": "1",
-        "index_flag_description": "{'0': 'non-indexed', '1: 'indexed '}",
-        "b3dm_flag": "-1",
-        "glb_flag": "1",
-        "b3dm/glb_flag_description": "{'1': 'composed b3dm', '-1: 'no composed'}",  
-        "property": "{'height': 'float', 'construction_year': 'int', 'city': 'text'}", 
-        "filter": " "
-    },
-    "church": {
-        "description": "10-282-562",
+    "9_284_556": {
+        "description": "This is for test, around TU Dleft Aula",
+        "lod": "lod12_2d",
+        "geom": "PolygonZ",
         "cluster_number": [1,2],
         "triangulation_flag": "tesselation",
-        "index_flag": "1",
+        "index_flag": "0",
         "index_flag_description": "{'0': 'non-indexed', '1: 'indexed '}",
         "b3dm_flag": "-1",
-        "glb_flag": "1",
-        "b3dm/glb_flag_description": "{'1': 'composed b3dm', '-1: 'no composed'}",  
-        "property": "{'height': 'float', 'construction_year': 'int', 'city': 'text'}", 
-        "filter": " "
-    },
-    "cube": {
-        "description": "This is a primitive cube/L-shaped polyhedron",
-        "cluster_number": [1,1],
-        "triangulation_flag": "tesselation",
-        "index_flag": "1",
-        "index_flag_description": "{'0': 'non-indexed', '1: 'indexed '}",
-        "b3dm_flag": "1",
         "glb_flag": "-1",
         "b3dm/glb_flag_description": "{'1': 'composed b3dm', '-1: 'no composed'}",  
-        "property": "{'height': 'float'}", 
+        "property": "{'height': 'float', 'construction_year': 'int', 'city': 'text'}", 
         "filter": " "
     },
-    "ladm": {
-        "description": "This is for ladm test",
-        "cluster_number": [1,1],
-        "triangulation_flag": "tesselation",
-        "index_flag": "-1",
-        "property": "{'height': 'float'}", 
-        "filter": " "
-    },
-    "campus_lod2": {
-        "description": "3DBAG Campus LOD2",
-        "cluster_number": [2,2],
-        "triangulation_flag": "tesselation",
-        "index_flag": "-1",
-        "property": "{'height': 'float', 'year': 'int'}", 
-        "filter": "and height > 10"
-    },
-    "campus_lod1": {
-        "description": "3DBAG Campus LOD1",
+    "10_282_562": {
+        "description": "contains new church and old church",
+        "lod": "lod12_3d",
+        "geom": "PolygonZ",
         "cluster_number": [1,2],
         "triangulation_flag": "tesselation",
-        "index_flag": "-1",
-        "property": "{'height': 'float', 'year': 'int'}", 
+        "index_flag": "1",
+        "index_flag_description": "{'0': 'non-indexed', '1: 'indexed '}",
+        "b3dm_flag": "-1",
+        "glb_flag": "1",
+        "b3dm/glb_flag_description": "{'1': 'composed b3dm', '-1: 'no composed'}",  
+        "property": "{'height': 'float', 'construction_year': 'int', 'city': 'text'}", 
         "filter": " "
+    },
+    "primitive": {
+        "description": "This is a primitive cube/L-shaped polyhedron",
+        "lod": "lod22_3d",
+        "geom": "PolygonZ",
+        "cluster_number": [1,1],
+        "triangulation_flag": "tesselation",
+        "index_flag": "1",
+        "index_flag_description": "{'0': 'non-indexed', '1: 'indexed '}",
+        "b3dm_flag": "-1",
+        "glb_flag": "1",
+        "b3dm/glb_flag_description": "{'1': 'composed b3dm', '-1: 'no composed'}",  
+        "property": "{'height': 'float'}", 
+        "filter": "and height < 10"
     }
 }

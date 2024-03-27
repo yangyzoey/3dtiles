@@ -3,11 +3,11 @@ import numpy as np
 import time
 import json
 
-from tile_function import array_coord, rotate_X,rotate_Y, triangulation, k_means, schema_update, input_data, write_b3dm, write_glb
+from tile_function import array_coord, rotate_X,rotate_Y, triangulation, k_means, schema_update, input_data, write_b3dm, write_glb, input_primitive
 from dbconfig import config
 
 
-def tiles_creator(theme, refine):
+def tiles_creator(theme):
 
     # Load JSON file
     with open('input.json', 'r') as file:
@@ -26,8 +26,9 @@ def tiles_creator(theme, refine):
     index_flag = int(theme_data['index_flag']) #0: non-indexed; 1: indexed; -1: no pre-computed
     b3dm_flag = int(theme_data["b3dm_flag"])
     glb_flag = int(theme_data["glb_flag"])
-    lod_flag = int(theme_data["lod"])
-    
+    lod_flag = theme_data["lod"]
+    print("the model lod: ",lod_flag)
+    geom_type = theme_data["geom"]
 
     # database connection
     conn_params = config(filename='database.ini', section='postgresql')
@@ -164,12 +165,17 @@ def tiles_creator(theme, refine):
     cursor.execute(sql)
     conn.commit()
 
-    print("input data starts")
+    print("\ninput data starts")
     # map dataset to the face table and object table
-    input_data(conn, cursor, lod_flag, theme)
-    print("input data ends")
+    if theme == "primitive":
+        input_primitive(conn, cursor, lod_flag, theme)
 
-    print("normalised normal start")
+    else:
+        sql = input_data(conn, cursor, lod_flag, theme)
+        print(sql)
+    print("input data ends\n")
+
+    print("\nnormalised normal start")
     # functioin compute normalised normal
     cursor.execute("""
     -- Drop the table if it exists
@@ -214,7 +220,7 @@ def tiles_creator(theme, refine):
     """)
     conn.commit()
 
-    print("normalised normal end")
+    print("normalised normal end\n")
 
     cursor.execute(
     """
@@ -243,58 +249,6 @@ def tiles_creator(theme, refine):
     conn.commit()
 
 
-    # update table property
-    # attribute_toatal = {**attrib_object}
-    # items = list(attribute_toatal.items())
-    # # print(type(items))
-    # for i in range(len(items)):  
-    #     # print(len(attribute_toatal))
-    #     # print(i)
-    #     sql =  "INSERT INTO property(id, name, type) VALUES({0}, '{1}', '{2}');".format(i+1, items[i][0], items[i][1])
-    #     # print(sql)
-    #     cursor.execute(sql)
-    #     conn.commit()
-
-
-    # update table object to add properties
-    items = list(attrib_object.items())
-    # print(type(items))
-    for i in range(len(items)):
-        # print(len(attrib_object))
-        # print(i)
-        attrib = items[i][0]
-        sql =  "ALTER TABLE object ADD {0} {1};".format(attrib, items[i][1])
-        # print(sql)
-        cursor.execute(sql)
-
-        if attrib == "construction_year":
-            cursor.execute("""
-            -- Set seed for the random number generator
-            SELECT SETSEED(0.5);
-
-            -- Update the 'construction_year' column using the random number generator
-            UPDATE object SET construction_year = 1950 + FLOOR(RANDOM() * (2021 - 1950));
-            """)
-        elif attrib == "class":
-            cursor.execute("UPDATE object SET class = 'building';")
-        elif attrib == "type":
-            cursor.execute("UPDATE object SET type = 'public space';")
-        elif attrib == "owner":
-            cursor.execute("UPDATE object SET owner = 'TU Delft';")
-        elif attrib == "city":
-            cursor.execute("UPDATE object SET city = 'Delft';")
-        else:
-            pass
-
-        # #'tmin': int, 
-        # #'tmax': int
-        # cursor.execute("""
-        # --UPDATE object SET tmin = 2000;
-        # --UPDATE object SET tmax = 3000;
-
-        conn.commit()
-
-
     # Add 3D envelope on the table object
     cursor.execute("""
     -- Drop the table if it exists
@@ -315,11 +269,114 @@ def tiles_creator(theme, refine):
     conn.commit()
 
 
-    # operation 3D envelope, compute height
+    # update table property
+    # attribute_toatal = {**attrib_object}
+    # items = list(attribute_toatal.items())
+    # # print(type(items))
+    # for i in range(len(items)):  
+    #     # print(len(attribute_toatal))
+    #     # print(i)
+    #     sql =  "INSERT INTO property(id, name, type) VALUES({0}, '{1}', '{2}');".format(i+1, items[i][0], items[i][1])
+    #     # print(sql)
+    #     cursor.execute(sql)
+    #     conn.commit()
+
+
+    # update table property
     cursor.execute("""
-    UPDATE object SET height = (ST_ZMax(envelope) - ST_ZMin(envelope));
+    -- Create the property table without the foreign key constraint
+    CREATE TABLE property AS (
+        SELECT 
+            ROW_NUMBER() OVER () AS pid,
+            id AS object_id
+        FROM object
+    );
+
+    -- Alter the property table to add the foreign key constraint
+    ALTER TABLE property
+    ADD CONSTRAINT fk_object_id FOREIGN KEY (object_id) REFERENCES object(id);
     """)
-    conn.commit()
+
+    items = list(attrib_object.items())
+    # print(type(items))
+    for i in range(len(items)):
+        # print(len(attrib_object))
+        # print(i)
+        attrib = items[i][0]
+        sql =  "ALTER TABLE property ADD {0} {1};".format(attrib, items[i][1])
+        # print(sql)
+        cursor.execute(sql)
+
+        if attrib == "height": # compute height from 3D envelope
+            cursor.execute("UPDATE property SET height = (ST_ZMax(o.envelope) - ST_ZMin(o.envelope)) FROM object o WHERE object_id = id;") 
+        elif attrib == "construction_year":
+            cursor.execute("""
+            -- Set seed for the random number generator
+            SELECT SETSEED(0.5);
+
+            -- Update the 'construction_year' column using the random number generator
+            UPDATE property SET construction_year = 1950 + FLOOR(RANDOM() * (2021 - 1950));
+            """)
+        elif attrib == "class":
+            cursor.execute("UPDATE property SET class = 'building';")
+        elif attrib == "gid":
+            cursor.execute("UPDATE property SET gid = object_id;")
+        elif attrib == "type":
+            cursor.execute("UPDATE property SET type = 'public space';")
+        elif attrib == "owner":
+            cursor.execute("UPDATE property SET owner = 'TU Delft';")
+        elif attrib == "city":
+            cursor.execute("UPDATE property SET city = 'Delft';")
+        else:
+            print("Error: property automation is not supported")
+
+        # #'tmin': int, 
+        # #'tmax': int
+        # cursor.execute("""
+        # --UPDATE property SET tmin = 2000;
+        # --UPDATE property SET tmax = 3000;
+
+        conn.commit()
+
+
+    # # update table object to add properties
+    # for i in range(len(items)):
+    #     # print(len(attrib_object))
+    #     # print(i)
+    #     attrib = items[i][0]
+    #     sql =  "ALTER TABLE object ADD {0} {1};".format(attrib, items[i][1])
+    #     # print(sql)
+    #     cursor.execute(sql)
+
+    #     if attrib == "height": # compute height from 3D envelope
+    #         cursor.execute("UPDATE object SET height = (ST_ZMax(envelope) - ST_ZMin(envelope));") 
+    #     elif attrib == "construction_year":
+    #         cursor.execute("""
+    #         -- Set seed for the random number generator
+    #         SELECT SETSEED(0.5);
+    #         -- Update the 'construction_year' column using the random number generator
+    #         UPDATE object SET construction_year = 1950 + FLOOR(RANDOM() * (2021 - 1950));
+    #         """)
+    #     elif attrib == "class":
+    #         cursor.execute("UPDATE object SET class = 'building';")
+    #     elif attrib == "gid":
+    #         cursor.execute("UPDATE object SET gid = id;")
+    #     elif attrib == "type":
+    #         cursor.execute("UPDATE object SET type = 'public space';")
+    #     elif attrib == "owner":
+    #         cursor.execute("UPDATE object SET owner = 'TU Delft';")
+    #     elif attrib == "city":
+    #         cursor.execute("UPDATE object SET city = 'Delft';")
+    #     else:
+    #         pass
+
+    #     # #'tmin': int, 
+    #     # #'tmax': int
+    #     # cursor.execute("""
+    #     # --UPDATE object SET tmin = 2000;
+    #     # --UPDATE object SET tmax = 3000;
+
+    #     conn.commit()
 
 
     # operation on table temp
@@ -341,55 +398,244 @@ def tiles_creator(theme, refine):
 
 
     #-------------------------------------------------------------triangulation start--------------------------------------------------------------------------------------------
-    print("triangulation start")
+    print("\ntriangulation start")
     start_time = time.time()
-
 
     triangulation(conn, cursor, triangulation_flag)
 
     end_time = time.time()
     tri_execution_time = end_time - start_time
-    print(f"triangulation end, execution time: {tri_execution_time} seconds")
-    # ---------------------------------------------------------------------------triangulation end--------------------------------------------------------------------------------------
+    print(f"triangulation end, execution time: {tri_execution_time} seconds\n")
+    # -----------------------------------------------------------triangulation end--------------------------------------------------------------------------------------
 
 
-    print("clustering start")
+    # covert coord to node_idx, update table face.tri_node_id, object.nodes
+    print("\nCoord to node_idx start")
+    start_time = time.time()
+    array_coord(conn, cursor)
+    end_time = time.time()
+    execution_time = end_time - start_time
+    print(f"Coord to node_idx end, execution time: {execution_time} seconds\n")
+
+
+    print("\nclustering start")
+    start_time = time.time()
     # cluster objects to different tiles
     k_means(conn, cursor, cnum1, cnum2) 
-    print("clustering end")
+    end_time = time.time()
+    execution_time = end_time - start_time
+    print("clustering end, execution time: {execution_time} seconds\n")
 
 
     # attemp to undound tile_id in object
     # RENAME row_num to temp_tile_id in the hierarchy table
+    # cursor.execute("""
+    # ALTER TABLE hierarchy RENAME COLUMN row_number TO temp_tile_id;
+    # """)
+    # conn.commit() 
+
+
+    # tile ids
     cursor.execute("""
-    ALTER TABLE hierarchy RENAME COLUMN row_number TO temp_tile_id;
-    """)
+        SELECT temp_tid FROM hierarchy
+        WHERE level = (SELECT level FROM hierarchy ORDER BY level DESC LIMIT 1);
+        """)
+    results = cursor.fetchall()
     conn.commit() 
 
+    tid_list= [int(i[0]) for i in results]
+    # print(tid_list)
+    # ---------------------------------------------fully pre-computed b3dm time-------------------
+    # full pre-computed b3dm in DB
+    print("\nPre-computed b3dm stored in DB start")
+    start_time = time.time()
 
-    # ----------------------------------------------create vw_tile from hierarchy-------------------------------------------------
-    sql_vw_tile ="""
-    CREATE OR REPLACE FUNCTION create_vw_tile(refine TEXT) RETURNS VOID AS $$
+
+    if b3dm_flag == -1:
+        print("No pre-computed b3dm")
+    else:
+        print("Write pre-computed b3dm to DB, {0}".format(["composed non-indexed b3dm", "composed indexed b3dm"][index_flag]))
+        cursor.execute("ALTER TABLE hierarchy ADD COLUMN b3dm BYTEA;")
+        for tid in tid_list:
+            write_b3dm(conn, cursor, tid, index_flag, sql_filter, attrib_object)   # 1: indexed; 0: non-idexed
+
+
+    end_time = time.time()
+    execution_time = end_time - start_time
+    print(f"Pre-computed b3dm stored in DB end, execution time: {execution_time} seconds\n")
+    # ---------------------------------------------fully pre-computed b3dm time---------------------
+
+
+    # ---------------------------------------------pre-computed gltf time-------------------
+    # full pre-computed b3dm in DB
+    print("\nPre-computed gltf stored in DB start")
+    start_time = time.time()
+
+    if glb_flag == -1:
+        print("No pre-computed binary gltf")
+    else:
+        print("Write pre-computed binary gltf to DB, {0}".format(["composed non-indexed glb", "composed indexed glb"][index_flag]))
+        cursor.execute("ALTER TABLE hierarchy ADD COLUMN glb BYTEA;")
+        for tid in tid_list:
+            write_glb(conn, cursor, tid, index_flag, sql_filter)
+
+    end_time = time.time()
+    execution_time = end_time - start_time
+    print(f"Pre-computed gltf stored in DB end, execution time: {execution_time} seconds\n")
+    # ---------------------------------------------pre-computed gltf time---------------------
+
+
+    # ----------------------------------------------create vw_content from hierarchy-------------------------------------------------
+    sql_add = ""
+    if glb_flag == 1:
+        sql_add = ", glb AS glb"
+    elif b3dm_flag == 1:
+        sql_add = ", b3dm AS b3dm"
+    
+    sql_vw_content ="""
+    CREATE OR REPLACE FUNCTION create_vw_content() RETURNS VOID AS $$
     BEGIN
-        EXECUTE 'DROP VIEW IF EXISTS vw_tile CASCADE';
+        EXECUTE 'DROP VIEW IF EXISTS vw_content CASCADE';
 
-        -- Create iew vw_tile
+        -- Create iew vw_content
+        EXECUTE '
+        CREATE VIEW vw_content AS
+        WITH e AS (
+        SELECT ST_3DExtent(envelope) AS envelope FROM hierarchy WHERE level = 2
+    )
+        SELECT
+            h.temp_tid AS tid,
+            1 AS tileset_id
+            --h.temp_tid AS content
+            {0}
+        FROM hierarchy h, e 
+        WHERE h.level = 2
+        ';
+
+        RETURN;
+    END;   
+    $$ LANGUAGE plpgsql;
+
+    SELECT create_vw_content();
+    SELECT * FROM vw_content;
+    """.format(sql_add)
+    cursor.execute(sql_vw_content)
+    conn.commit() 
+    # ---------------------------------------------create vw_tile from hierarchy-----------------------------------------------------------
+
+    # sql_vw_tileset ="""
+    # CREATE OR REPLACE FUNCTION create_vw_tileset() RETURNS VOID AS $$
+    # BEGIN
+
+    #     -- Drop the existing view if it exists
+    #     EXECUTE 'DROP VIEW IF EXISTS vw_tileset;';
+
+    #     -- Create the view vw_tileset
+    #     EXECUTE '
+    #         CREATE VIEW vw_tileset AS
+    #         WITH property AS (
+    #             SELECT json_object_agg(initcap(properties), json_build_object()) AS property_json
+    #             FROM (
+    #                 SELECT column_name AS properties
+    #                 FROM information_schema.columns
+    #                 WHERE table_name = ''property''
+    #                 ORDER BY ordinal_position
+    #                 OFFSET 2
+    #             ) AS property_data
+    #         ),
+			
+	# 		children AS (
+    #             SELECT
+    #                 array_agg(json_build_object(
+    #                     ''boundingVolume'', json_build_object(
+    #                         ''box'', tile_data.bounding_volume
+    #                     ),
+    #                     ''geometricError'', tile_data.geometric_error,
+    #                     ''content'', json_build_object(''uri'', CONCAT(''/tiles/'', tile_data.content, ''.b3dm''))
+    #                 )) AS children_json
+    #             FROM 
+				
+	# 				(
+	# 				SELECT *
+	# 				FROM vw_tile
+	# 				WHERE tileset_id = 1 --AND tile_data.parent_id IS NOT NULL
+	# 				 --AND tile_data.parent_id IS NOT NULL
+	# 				ORDER BY id -- Order by tile_id
+	# 				) AS tile_data
+	# 			 GROUP BY tile_data.tileset_id
+	# 			)
+  
+    #         SELECT 
+    #             1 AS id,
+    #             json_build_object(
+    #                 ''asset'', json_build_object(
+    #                     ''version'', ''1.0'',
+    #                     ''tilesetVersion'', ''1.2.3''
+    #                 ),
+    #                 ''properties'', property.property_json,
+    #                 ''geometricError'', tile_data.geometric_error,
+    #                 ''root'', json_build_object(
+    #                     ''boundingVolume'', json_build_object(
+    #                         ''box'', tile_data.bounding_volume
+    #                     ),
+    #                     ''geometricError'', tile_data.geometric_error,
+    #                     ''refine'', tile_data.refine,
+    #                     ''content'', json_build_object(
+    #                         ''boundingVolume'', json_build_object(
+    #                             ''box'', tile_data.bounding_volume
+    #                         ),
+    #                         ''uri'', CONCAT(''/tiles/'', tile_data.content, ''.b3dm'')
+    #                     ),
+    #                     ''children'', (children.children_json)[2:],
+    #                     ''transform'', ARRAY[1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1, 1, 1, 1.0]
+    #                 )
+    #             ) AS tileset_json  
+    #         FROM (
+    #             SELECT *
+    #             FROM vw_tile
+    #             WHERE tileset_id = 1 AND parent_id IS NULL
+    #         ) AS tile_data
+    #         ,property
+    #         ,children;';
+
+    #     RETURN;
+    # END;
+    # $$ LANGUAGE plpgsql;
+
+    # -- Call the function to create the view
+    # SELECT create_vw_tileset();
+
+    # -- Retrieve data from the created view
+    # --SELECT * FROM vw_tileset;
+    # """
+
+    sql_vw_tileset ="""
+        CREATE OR REPLACE FUNCTION create_vw_tileset() RETURNS VOID AS $$
+    BEGIN
+	
+        -- Drop the existing view if it exists
+        EXECUTE 'DROP VIEW IF EXISTS vw_tileset;';
+		
+		
+		EXECUTE 'DROP VIEW IF EXISTS vw_tile CASCADE';
+		
+		-- Create iew vw_tile
         EXECUTE '
         CREATE VIEW vw_tile AS
         WITH e AS (
         SELECT ST_3DExtent(envelope) AS envelope FROM hierarchy WHERE level = 2
     )
         SELECT
-            h.temp_tile_id AS id,
+            h.temp_tid AS id,
             1 AS tileset_id,
 
-            CASE WHEN h.temp_tile_id != 1 THEN
+            CASE WHEN h.temp_tid != 1 THEN
                 1
             ELSE
                 NULL
             END AS parent_id,
 
-            CASE WHEN h.temp_tile_id != 1 THEN
+            CASE WHEN h.temp_tid != 1 THEN
             ARRAY[
             (ST_XMin(h.envelope) + ST_XMax(h.envelope)) / 2, -- centerX
             (ST_YMin(h.envelope) + ST_YMax(h.envelope)) / 2, -- centerY
@@ -409,49 +655,31 @@ def tiles_creator(theme, refine):
         ] 
             END AS bounding_volume,
 
-            CASE WHEN h.temp_tile_id = 1 THEN
+            CASE WHEN h.temp_tid = 1 THEN
                 ROUND(
                 sqrt(
                     power(ST_XMax(h.envelope) - ST_XMin(h.envelope), 2) +
                     power(ST_YMax(h.envelope) - ST_YMin(h.envelope), 2) +
                     power(ST_ZMax(h.envelope) - ST_ZMin(h.envelope), 2)
-                )::numeric,
+                )::numeric/2,
                 2) 
                 --diagonal_length
             ELSE
                 0
             END AS geometric_error,
 
-            CASE WHEN h.temp_tile_id = 1 THEN
-                ''' || refine || '''
+            CASE WHEN h.temp_tid = 1 THEN
+                ''ADD''
             ELSE
                 NULL
             END AS refine,
 
-            h.temp_tile_id AS content,
-            NULL AS glb,
-            NULL AS b3dm
-        FROM hierarchy h, e
+            h.temp_tid AS content
+        FROM hierarchy h, e 
         WHERE h.level = 2
         ';
 
-        RETURN;
-    END;   
-    $$ LANGUAGE plpgsql;
-
-    SELECT create_vw_tile('{0}');
-    """.format(refine)
-    cursor.execute(sql_vw_tile)
-    conn.commit() 
-    # ---------------------------------------------create vw_tile from hierarchy-----------------------------------------------------------
-
-    sql_vw_tileset ="""
-    CREATE OR REPLACE FUNCTION create_vw_tileset() RETURNS VOID AS $$
-    BEGIN
-
-        -- Drop the existing view if it exists
-        EXECUTE 'DROP VIEW IF EXISTS vw_tileset;';
-
+     
         -- Create the view vw_tileset
         EXECUTE '
             CREATE VIEW vw_tileset AS
@@ -460,9 +688,9 @@ def tiles_creator(theme, refine):
                 FROM (
                     SELECT column_name AS properties
                     FROM information_schema.columns
-                    WHERE table_name = ''object''
+                    WHERE table_name = ''property''
                     ORDER BY ordinal_position
-                    OFFSET 3
+                    OFFSET 2
                 ) AS property_data
             ),
 			
@@ -519,7 +747,6 @@ def tiles_creator(theme, refine):
             ) AS tile_data
             ,property
             ,children;';
-
         RETURN;
     END;
     $$ LANGUAGE plpgsql;
@@ -528,69 +755,11 @@ def tiles_creator(theme, refine):
     SELECT create_vw_tileset();
 
     -- Retrieve data from the created view
-    --SELECT * FROM vw_tileset;
+    SELECT * FROM vw_tileset;
     """
     cursor.execute(sql_vw_tileset)
     conn.commit() 
 
-
-    # covert coord to node_idx, update table face.tri_node_id, object.nodes
-    print("Coord to node_idx start")
-    start_time = time.time()
-
-    # sql = "SELECT id FROM tile;"
-    sql = "SELECT id FROM vw_tile;"
-    cursor.execute(sql)
-    results = cursor.fetchall()
-    # print(results)
-    conn.commit() 
-
-    tid_list= [int(i[0]) for i in results]
-    # print(tid_list)
-    array_coord(conn, cursor)
-
-    end_time = time.time()
-    execution_time = end_time - start_time
-    print(f"Coord to node_idx end, execution time: {execution_time} seconds")
-
-    # ---------------------------------------------fully pre-computed b3dm time-------------------
-    # full pre-computed b3dm in DB
-    print("Pre-computed b3dm stored in DB start")
-    start_time = time.time()
-
-
-    if b3dm_flag == -1:
-        print("No pre-computed b3dm")
-    else:
-        print("Write pre-computed b3dm to DB, {0}".format(["composed non-indexed b3dm", "composed indexed b3dm"][index_flag]))
-        cursor.execute("ALTER TABLE hierarchy ADD COLUMN b3dm BYTEA;")
-        for tid in tid_list:
-            write_b3dm(conn, cursor, tid, index_flag, sql_filter, attrib_object)   # 1: indexed; 0: non-idexed
-
-
-    end_time = time.time()
-    execution_time = end_time - start_time
-    print(f"Pre-computed b3dm stored in DB end, execution time: {execution_time} seconds")
-    # ---------------------------------------------fully pre-computed b3dm time---------------------
-
-
-    # ---------------------------------------------pre-computed gltf time-------------------
-    # full pre-computed b3dm in DB
-    print("Pre-computed gltf stored in DB start")
-    start_time = time.time()
-
-    if glb_flag == -1:
-        print("No pre-computed binary gltf")
-    else:
-        print("Write pre-computed binary gltf to DB, {0}".format(["composed non-indexed glb", "composed indexed glb"][index_flag]))
-        cursor.execute("ALTER TABLE hierarchy ADD COLUMN glb BYTEA;")
-        for tid in tid_list:
-            write_glb(conn, cursor, tid, index_flag, sql_filter)
-
-    end_time = time.time()
-    execution_time = end_time - start_time
-    print(f"Pre-computed gltf stored in DB end, execution time: {execution_time} seconds")
-    # ---------------------------------------------pre-computed gltf time---------------------
 
     # delete unnecessary tables
     schema_update(conn, cursor)
@@ -599,15 +768,16 @@ def tiles_creator(theme, refine):
 if __name__ == "__main__":
 
     # specfy the dataset theme 
-    theme = "test"  #"test" #"37en2" #"test" #  # "37en1"  # "37en2" # "campus_lod1"
-    refine = 'ADD'
+    theme = "primitive"  #"test" #"37en2" #"test" #  # "37en1"  # "37en2" # "campus_lod1"
+    # refine = 'ADD'
+
 
     # total time start
     total_start_time = time.time()
     
-    tiles_creator(theme, refine)
+    tiles_creator(theme)
 
     # total time end
     total_end_time = time.time()
     execution_time = total_end_time - total_start_time
-    print(f"Total execution time: {execution_time} seconds")
+    print(f"Total execution time: {execution_time} seconds\n")

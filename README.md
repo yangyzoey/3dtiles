@@ -2,8 +2,8 @@
 
 ## Step:
 
-### 1. Load data
-#### First, load 3D data into Postgres
+### 1. Load data into Postgres
+#### First, download gpkg dataset:
 Downloaded a tile from 3dbag.nl in geopackage format (gpkg) https://3dbag.nl/en/download?tid=9-284-556. (tile around TU Delft Aula).
 
 
@@ -58,6 +58,3 @@ Feel free to customise configuration for the application.
 
 ## Based on:
 This prototype is based on https://github.com/bmmeijers/lis3d
-
-// Continue..
-Explain geom_type(polygon, polygonz, etc) description in the input.json. 

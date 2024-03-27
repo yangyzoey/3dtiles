@@ -52,6 +52,7 @@ def create_app(dataset_theme):
         database=conn_params["database"],
     )
 
+
     @app.teardown_appcontext
     def close_conn(e):
         db = g.pop("db", None)
@@ -186,29 +187,35 @@ def create_app(dataset_theme):
         elif glb_flag == 1:
             featureTableData, batchTableData = fetch_featureTable_batchTable(conn, cursor, tile_id, sql_filter, attrib_object)
 
-            sql = "SELECT glb from hierarchy where temp_tile_id = {0} and level =2".format(tile_id)
+            sql = "SELECT glb from hierarchy where temp_tid = {0} and level =2".format(tile_id)
+            sql = "SELECT glb from vw_content where tid = {0}".format(tile_id)
             cursor.execute(sql)
-            print("Approach 2: fetch precomposed binary gltf successfully: {0}".format(tile_id))
             results = cursor.fetchall()
             glbBytesData = results[0][0]
             conn.commit() 
+
+            print("Approach 2: fetch precomposed binary gltf successfully: {0}".format(tile_id))
+
+            # print("featureTableData", featureTableData)
 
             # Create an instance of the B3DM class
             b3dm = B3DM()
             # generate b3dm
             b3dm_bytes = b3dm.draw_b3dm(featureTableData, batchTableData, glbBytesData)
+            print("Approach 2: composed b3dm in the server successfully: {0}".format(tile_id))
 
         # # ----------------------Approach II: fetch precomposed glb from DB end---------------------------------------
 
 
         # # ----------------------Approach III: fetch precomposed b3dm from DB start-------------------------------------
         elif b3dm_flag == 1:
-            sql = "SELECT b3dm from hierarchy where temp_tile_id = {0} and level =2".format(tile_id)
+            sql = "SELECT b3dm from hierarchy where temp_tid = {0} and level =2".format(tile_id)
+            sql = "SELECT b3dm from vw_content where tid = {0}".format(tile_id)
             cursor.execute(sql)
-            print("Approach 3: fetch precomposed b3dm successfully: {0}".format(tile_id))
             results = cursor.fetchall()
             b3dm_bytes = results[0][0]
             conn.commit() 
+            print("Approach 3: fetch precomposed b3dm successfully: {0}".format(tile_id))
 
         # # ----------------------Approach III: fetch precomposed b3dm from DB end---------------------------------------
   
@@ -225,7 +232,7 @@ def create_app(dataset_theme):
         route_end_time = time.time()
         # Calculate the execution time for this route
         route_execution_time = route_end_time - route_start_time
-        print(f"Execution time for b3dm fetch: {route_execution_time} seconds")
+        print(f"**Execution time for tile fetch: {route_execution_time} seconds")
 
         # ---------------------------------write for debuging-------------------------------------------------------
         # glb_bytes = glbBytesData
@@ -239,10 +246,9 @@ def create_app(dataset_theme):
                 b3dm_f.write(output)
         # ---------------------------------write for debuging-------------------------------------------------------
 
-
         response = Response(b3dm_bytes, mimetype="application/octet-stream")
+        # print("b3dm ready to send: {0}.b3dm".format(tile_name))
 
-        print("b3dm ready to send: {0}.b3dm".format(tile_name))
         return response
 
     return app
@@ -287,16 +293,15 @@ if __name__ == "__main__":
     import time
 
     # specfy the dataset theme 
-    dataset_theme = "test" #"cube"  #"37en2" # # "37en1"  # "37en2" # "campus_lod1"
+    dataset_theme = "10_282_562" #"primitive" # "9_284_556" #"cube"  #"37en2" # # "37en1"  # "37en2" # "campus_lod1"
 
     #----------------------------------------------3D Tiles database------------------------------------------
 
-    refine = 'ADD'
 
     # total time start
     total_start_time = time.time()
     
-    tiles_creator(dataset_theme, refine)
+    tiles_creator(dataset_theme)
 
     # total time end
     total_end_time = time.time()

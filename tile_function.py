@@ -15,13 +15,13 @@ def fetch_tile(conn, cursor, tile_id, index_flag, sql_filter, attrib_object):
  
         sql = """
         WITH UnnestedIDs AS (
-        SELECT object_id as oid_list, temp_tile_id
+        SELECT object_id as oid_list, temp_tid
         FROM hierarchy
         WHERE level = (SELECT level FROM hierarchy ORDER BY level DESC LIMIT 1) AND
-        temp_tile_id = {1}
+        temp_tid = {1}
         )
         SELECT id, nodes, {0}  
-        FROM object 
+        FROM object o join property p on o.id = p.object_id
         WHERE id IN (SELECT unnest(oid_list) FROM UnnestedIDs) 
         {2}
         ORDER BY id;
@@ -43,7 +43,7 @@ def fetch_tile(conn, cursor, tile_id, index_flag, sql_filter, attrib_object):
         # -----------------------------------------gltf end--------------------------------
 
         #-------------------------------------------featureTable,batchTable start------------------
-        featureTableData, batchTableData = compose_featureTable_batchTable(oid_list, attrib_object, results)
+        featureTableData, batchTableData = compose_featureTable_batchTable(conn, cursor, oid_list, tile_id, sql_filter, attrib_object, results)
         #-------------------------------------------featureTable,batchTable end----------------------------------------------------
 
         conn.commit()
@@ -61,14 +61,14 @@ def fetch_featureTable_batchTable(conn, cursor, tile_id, sql_filter, attrib_obje
 
     sql = """
     WITH UnnestedIDs AS (
-    SELECT object_id as oid_list, temp_tile_id
+    SELECT object_id as oid_list, temp_tid
     FROM hierarchy
     WHERE level = (SELECT level FROM hierarchy ORDER BY level DESC LIMIT 1) AND
-    temp_tile_id = {1}
+    temp_tid = {1}
     )
     SELECT id, nodes, {0}  
-    FROM object 
-    WHERE id IN (SELECT unnest(oid_list) FROM UnnestedIDs) 
+    FROM object o join property p on o.id = p.object_id
+    WHERE id IN (SELECT unnest(oid_list) FROM UnnestedIDs)
     {2}
     ORDER BY id;
     """.format(attrib_str, tile_id, sql_filter)
@@ -83,7 +83,7 @@ def fetch_featureTable_batchTable(conn, cursor, tile_id, sql_filter, attrib_obje
 
 
     #-------------------------------------------featureTable,batchTable start------------------
-    featureTableData, batchTableData = compose_featureTable_batchTable(oid_list, attrib_object, results)
+    featureTableData, batchTableData = compose_featureTable_batchTable(conn, cursor, oid_list, tile_id, sql_filter, attrib_object, results)
     #-------------------------------------------featureTable,batchTable end----------------------------------------------------
 
     conn.commit()
@@ -244,7 +244,8 @@ def compose_gltf(conn, cursor, tile_id, oid_list, nodes_values, index_flag):
     ]*150
 
     rgb = colors[tile_id]
-    print("\ntile No.{} rgb: ".format(tile_id), rgb)
+    print("tile No.{}".format(tile_id))
+    print("compose the binary gltf, rgb: ".format(tile_id), rgb)
     print("\n")
 
 
@@ -258,7 +259,11 @@ def compose_gltf(conn, cursor, tile_id, oid_list, nodes_values, index_flag):
     return glbBytesData
 
 
-def compose_featureTable_batchTable(oid_list, attrib_object, results):
+def compose_featureTable_batchTable(conn, cursor, oid_list, tile_id, sql_filter, attrib_object, results):
+    attrib_list = list(attrib_object.keys())
+    # Convert attrib_list to a string
+    attrib_str = ", ".join(attrib_list)
+
     #------------------------------------------------featureTable start------------------
     object_count = len(oid_list)
     # Set the Feature Table
@@ -278,7 +283,7 @@ def compose_featureTable_batchTable(oid_list, attrib_object, results):
         if idx == 0 or idx == 1:
             pass
         else:
-            attrib = Cap_attrib_list[idx - 2]
+            attrib = Cap_attrib_list[idx-2]
             # print("attrib:", attrib)
             attrib_lower = attrib.lower()
             attrib_type = str(attrib_object[attrib_lower])
@@ -295,7 +300,9 @@ def compose_featureTable_batchTable(oid_list, attrib_object, results):
             
             json_dict[attrib] = values
 
-    json_dict["ID"] = list(range(len(json_dict[Cap_attrib_list[0]])))
+    # add ID, otherwise it is unnamed feature
+    json_dict["ID"] = oid_list # ID based on object_id #list(range(1,1+len(json_dict[Cap_attrib_list[0]]))) # ID enumerate
+
 
     properties = json_dict
     # print("properties", properties)
@@ -304,6 +311,7 @@ def compose_featureTable_batchTable(oid_list, attrib_object, results):
     batchTableData = json.dumps(properties, separators=(',', ':'))
     #------------------------------------------------batchTable end--------------------
 
+    conn.commit()
 
     return featureTableData, batchTableData
 
@@ -329,7 +337,7 @@ def write_b3dm(conn, cursor, tile_id, index_flag, sql_filter, attrib_object):
     # with open(write_path, 'wb') as b3dm_f:
     #     b3dm_f.write(output)
 
-    sql = "UPDATE hierarchy SET b3dm = %s WHERE temp_tile_id = %s and level = 2"
+    sql = "UPDATE hierarchy SET b3dm = %s WHERE temp_tid = %s and level = 2"
     values = (b3dm_bytes, tile_id)
     cursor.execute(sql, values)
     print("write tile successfully: {0}".format(tile_id))
@@ -343,13 +351,13 @@ def write_glb(conn, cursor, tile_id, index_flag, sql_filter):
 
         sql = """
         WITH UnnestedIDs AS (
-        SELECT object_id as oid_list, temp_tile_id
+        SELECT object_id as oid_list, temp_tid
         FROM hierarchy
         WHERE level = (SELECT level FROM hierarchy ORDER BY level DESC LIMIT 1) AND
-        temp_tile_id = {0}
+        temp_tid = {0}
         )
         SELECT id, nodes 
-        FROM object 
+        FROM object o join property p on o.id = p.object_id
         WHERE id IN (SELECT unnest(oid_list) FROM UnnestedIDs) 
         {1}
         ORDER BY id;
@@ -370,7 +378,7 @@ def write_glb(conn, cursor, tile_id, index_flag, sql_filter):
         glbBytesData = compose_gltf(conn, cursor, tile_id, oid_list, nodes_values, index_flag)
         # -----------------------------------------gltf end--------------------------------
 
-        sql = "UPDATE hierarchy SET glb = %s WHERE temp_tile_id = %s and level = 2"
+        sql = "UPDATE hierarchy SET glb = %s WHERE temp_tid = %s and level = 2"
         values = (glbBytesData, tile_id)
         cursor.execute(sql, values)
         print("write tile successfully: {0}".format(tile_id))
@@ -378,7 +386,6 @@ def write_glb(conn, cursor, tile_id, index_flag, sql_filter):
         conn.commit()
 
         return 0
-
 
 
 def array_coord(conn, cursor):
@@ -973,13 +980,22 @@ def k_means(conn, cursor, cnum1, cnum2):
     --DETAIL:  view vw_tile depends on table hierarchy
     --HINT:  Use DROP .. CASCADE to    delete dependent objects altogether
 
-    CREATE TABLE hierarchy AS
-    SELECT (ARRAY_AGG(DISTINCT level))[1] AS level, 
+    CREATE TABLE hierarchy (
+    hid SERIAL PRIMARY KEY,
+    level int,
+    object_id int[],
+    cluster_id int, 
+    parent_cluster_id int, 
+    envelope box3d
+    );
+
+    INSERT INTO hierarchy (level, object_id, cluster_id, parent_cluster_id, envelope)
+    --CREATE TABLE hierarchy AS
+    SELECT 
+    (ARRAY_AGG(DISTINCT level))[1] AS level, 
     ARRAY_AGG(object_id) AS object_id,
     (ARRAY_AGG(DISTINCT cluster_id))[1] AS cluster_id,   
     (ARRAY_AGG(DISTINCT parent_cluster_id))[1] AS parent_cluster_id,
-    --ST_AsText(ST_Collect(envelope))
-    --ST_Extent(envelope) AS envelope, 
     ST_3DExtent(envelope) AS envelope
     FROM hierarchical_clusters 
     JOIN object
@@ -988,19 +1004,19 @@ def k_means(conn, cursor, cnum1, cnum2):
 
 
     ALTER TABLE hierarchy
-    ADD COLUMN row_number INTEGER,
-    ADD COLUMN id SERIAL;
+    ADD COLUMN temp_tid INTEGER;
+    --ADD COLUMN hid SERIAL PRIMARY KEY;
 
-    --Update row_number column with values generated by ROW_NUMBER() window function
+    --Update temp_tid column with values generated by ROW_NUMBER() window function
     WITH n AS (
-        SELECT id,
+        SELECT hid,
             ROW_NUMBER() OVER (PARTITION BY level ORDER BY cluster_id) AS rn
         FROM hierarchy
     )
     UPDATE hierarchy AS h
-    SET row_number = n.rn
+    SET temp_tid = n.rn
     FROM n
-    WHERE h.id = n.id;
+    WHERE h.hid = n.hid;
 
     --SELECT * FROM hierarchy;
     """.format(cnum1, cnum2)
@@ -1033,6 +1049,76 @@ def schema_update(conn, cursor):
     return 0
 
 
+def input_primitive(conn, cursor, lod_flag, theme):
+    cursor.execute(
+    """
+    --Drop object table if exists
+    DROP TABLE IF EXISTS object_{0};
+    --Create object table
+    CREATE TEMP TABLE object_{0} AS (
+    SELECT 
+        1 AS id,
+		ST_GeomFromText('POLYHEDRALSURFACE Z(
+		((2 0 0, 2 2 0, 0 2 0, 0 3 0, 3 3 0, 3 0 0, 2 0 0)),
+		((2 0 0, 2 0 1, 2 2 1, 2 2 0, 2 0 0)),
+		((2 2 0, 2 2 1, 0 2 1, 0 2 0, 2 2 0)),
+		((0 2 0, 0 2 1, 0 3 1, 0 3 0, 0 2 0)),
+		((0 3 0, 0 3 1, 3 3 1, 3 3 0, 0 3 0)),
+		((2 0 0, 3 0 0, 3 0 1, 2 0 1, 2 0 0)),
+		((3 3 0, 3 3 1, 3 0 1, 3 0 0, 3 3 0)),
+		((3 0 1, 3 3 1, 0 3 1, 0 2 1, 2 2 1, 2 0 1, 3 0 1)))')
+		as geom 
+    );
+	
+
+    --Drop face table if exists
+    DROP TABLE IF EXISTS face_{0};
+    --Create face table
+    CREATE TEMP TABLE face_{0} AS (
+        SELECT 
+        ROW_NUMBER() OVER (ORDER BY (object_id, fid)) AS id,
+        object_id,
+        fid,
+        polygon
+        FROM
+            (
+            SELECT 
+            ROW_NUMBER() OVER (PARTITION BY object_id ORDER BY object_id) AS fid,
+            object_id,
+            polygon
+            FROM 
+                (
+                SELECT 
+                ROW_NUMBER() OVER () AS object_id,
+                --gid, --replace large-number gid with increamental id              
+                (ST_DUMP(geom)).geom AS polygon
+                FROM object_{0}
+                ) AS f
+            ) AS ff
+    ) ORDER BY id;
+
+    -- Update geometries with SRID 0 to SRID 4978
+    UPDATE face_{0}
+    SET polygon = ST_SetSRID(polygon, 4978)
+    WHERE ST_SRID(polygon) = 0;
+
+    -- Delete invlid polyongs
+    --DELETE FROM face_{0}
+    --WHERE ST_IsValid(polygon) = false;
+
+    INSERT INTO object (id)
+    SELECT id
+    FROM object_{0};
+    INSERT INTO face (id, object_id, polygon)
+    SELECT id, object_id, polygon
+    FROM face_{0}
+    ORDER BY id;
+    """.format(theme)
+    )
+
+    conn.commit()
+
+
 def input_data(conn, cursor, lod_flag, theme):
     
     object_table = "object_{}".format(theme) 
@@ -1050,24 +1136,24 @@ def input_data(conn, cursor, lod_flag, theme):
     # """
     # )
 
-    if lod_flag == 2:
-        cursor.execute(
-        """
+    if lod_flag == "lod12_3d" or lod_flag == "lod22_3d":
+        
+        sql = """
         DROP TABLE IF EXISTS test_epsg4978;
-        create table test_epsg4978 as select fid as gid, st_transform(geom, 4978) as geom4978 from dbuser.{0}_lod12_3d;
+        create table test_epsg4978 as select fid as gid, st_transform(geom, 4978) as geom4978 from dbuser.{1}_{0} ORDER BY gid LIMIT 10;
 
         --Drop object table if exists
         DROP TABLE IF EXISTS object_{0}; --object_test
         --Create object table
         CREATE TEMP TABLE object_{0} AS (
         SELECT 
-            ROW_NUMBER() OVER () AS id,
+            ROW_NUMBER() OVER () AS id, --replace large-number gid with increamental id 
             geom4978 as geom
             FROM test_epsg4978  
         );
 
         --Drop face table if exists
-        DROP TABLE IF EXISTS face_{0}; --face_test
+        DROP TABLE IF EXISTS face_{0}; 
         --Create face table
         CREATE TEMP TABLE face_{0} AS (
             SELECT 
@@ -1084,21 +1170,20 @@ def input_data(conn, cursor, lod_flag, theme):
                 FROM 
                     (
                     SELECT 
-                    ROW_NUMBER() OVER () AS object_id,
-                    --gid, --replace large-number gid with increamental id              
-                    ST_AsText((ST_DUMP(geom)).geom) AS polygon
+                    id AS object_id,               
+                    (ST_DUMP(geom)).geom AS polygon
                     FROM object_{0}
                     ) AS f
                 ) AS ff
         ) ORDER BY id;
 
         -- Update geometries with SRID 0 to SRID 4978
-        UPDATE face_test
+        UPDATE face_{0}
         SET polygon = ST_SetSRID(polygon, 4978)
         WHERE ST_SRID(polygon) = 0;
 
         -- Delete invlid polyongs
-        DELETE FROM face_test
+        DELETE FROM face_{0}
         WHERE ST_IsValid(polygon) = false;
 
         DROP TABLE test_epsg4978;
@@ -1110,18 +1195,98 @@ def input_data(conn, cursor, lod_flag, theme):
         SELECT id, object_id, polygon
         FROM face_{0}
         ORDER BY id;
-        """.format(theme)
-        )
-    elif lod_flag == 1:
-        pass
+        """.format(theme, lod_flag)
+
+    elif lod_flag == "lod12_2d":
+        
+        sql = """
+        DROP TABLE IF EXISTS test_epsg4978;
+
+CREATE TABLE test_epsg4978 AS
+       SELECT fid AS gid, st_transform(g2, 4978) as geom4978 
+       from 
+(
+With extrusion AS
+(
+SELECT lod.fid AS fid, 
+b3_h_maaiveld,
+ST_SetSRID(ST_Extrude(lod.geom, 0, 0, b3_h_max), ST_SRID(lod.geom)) AS g1
+        FROM dbuser.{1}_{0} lod
+        join dbuser.pand_{0} p on p.fid = lod.fid 
+        ORDER BY p.fid ASC LIMIT 10
+)
+SELECT
+fid, 
+--ST_SRID(g1) AS S2,
+ST_SetSRID(ST_Translate(extrusion.g1, 0, 0, b3_h_maaiveld), ST_SRID(g1)) AS g2
+FROM extrusion
+) temp;
+
+        --Drop object table if exists
+        DROP TABLE IF EXISTS object_{0}; --object_test
+        --Create object table
+        CREATE TEMP TABLE object_{0} AS (
+        SELECT 
+            ROW_NUMBER() OVER () AS id, --replace large-number gid with increamental id 
+            geom4978 as geom
+            FROM test_epsg4978  
+        );
+
+        --Drop face table if exists
+        DROP TABLE IF EXISTS face_{0}; 
+        --Create face table
+        CREATE TEMP TABLE face_{0} AS (
+            SELECT 
+            ROW_NUMBER() OVER (ORDER BY (object_id, fid)) AS id,
+            object_id,
+            fid,
+            polygon
+            FROM
+                (
+                SELECT 
+                ROW_NUMBER() OVER (PARTITION BY object_id ORDER BY object_id) AS fid,
+                object_id,
+                polygon
+                FROM 
+                    (
+                    SELECT 
+                    id AS object_id,               
+                    (ST_DUMP(geom)).geom AS polygon
+                    FROM object_{0}
+                    ) AS f
+                ) AS ff
+        ) ORDER BY id;
+
+        -- Update geometries with SRID 0 to SRID 4978
+        UPDATE face_{0}
+        SET polygon = ST_SetSRID(polygon, 4978)
+        WHERE ST_SRID(polygon) = 0;
+
+        -- Delete invlid polyongs
+        DELETE FROM face_{0}
+        WHERE ST_IsValid(polygon) = false;
+
+        --DROP TABLE test_epsg4978;
+        
+        INSERT INTO object (id)
+        SELECT id
+        FROM object_{0};
+        INSERT INTO face (id, object_id, polygon)
+        SELECT id, object_id, polygon
+        FROM face_{0}
+        ORDER BY id;
+        """.format(theme, lod_flag)
+     
     else:
         print("The lod_{0} is not supported yet".format(lod_flag))
+
+    cursor.execute(sql)
 
 
     conn.commit() 
     # cursor.close()
     # conn.close()   
-    return 0 
+    return sql
 
 
 
