@@ -3,22 +3,6 @@ import base64
 import struct
 import numpy as np
 
-
-def read_data(file_path): 
-
-    # Open the JSON file in read mode # 'rb' "read binary"
-    with open(file_path, 'r') as file:
-        # Load and parse the JSON data
-        data = json.load(file)
-
-    # Access specific keys in the JSON data
-    positions = data["position"]
-    normals = data["normal"]
-    ids = data["ID"]
-    indices = data["indices"]
-
-    return positions, normals, ids, indices
-
  
 class GLTF:
     def __init__(self):
@@ -32,47 +16,47 @@ class GLTF:
       "bufferView": 0, 
       "byteOffset": 0, # positions
       "componentType": 5126,
-      "count": 240, # TO DO
+      "count": 240, 
       "type": "VEC3",
       "min": [
         -103.97583675780334,
         -114.61250572279096,
         -102.50925003085285
-      ], # TO DO
+      ], 
       "max": [
         118.4458890708629,
         106.54341480974108,
         93.78807587129995
-      ] # TO DO
+      ] 
     },
     {
       "bufferView": 1, 
       "byteOffset": 0, # normals
       "componentType": 5126,
-      "count": 240, # TO DO
+      "count": 240, 
       "type": "VEC3",
       "min": [
         -0.9686356343768793,
         -0.7415555652213446,
         -0.765567091384559
-      ], # TO DO
+      ], 
       "max": [
         0.9686356343768793,
         0.7415555652213446,
         0.765567091384559
-      ] # TO DO
+      ] 
     },
     {
       "bufferView": 2, 
       "byteOffset": 0, # ids
       "componentType": 5126,
-      "count": 240, # TO DO
+      "count": 240, 
       "type": "SCALAR",
       "min": [
         0
       ],
       "max": [
-        9    # TO DO
+        9    
       ]
     },
   ],
@@ -83,28 +67,28 @@ class GLTF:
             "buffers": [
               {
                     "name": "buffer",
-                    "byteLength": 7440 # TO DO
+                    "byteLength": 7440 
               }
             ],
             "bufferViews": [
               {
       "buffer": 0,
-      "byteLength": 2880, # TO DO
-      "byteOffset": 0, # TO DO
+      "byteLength": 2880, 
+      "byteOffset": 0, 
       "target": 34962, 
       "byteStride": 12
     },
     {
       "buffer": 0,
-      "byteLength": 2880, # TO DO
-      "byteOffset": 2880, # TO DO
+      "byteLength": 2880, 
+      "byteOffset": 2880, 
       "target": 34962,
       "byteStride": 12
     },
     {
       "buffer": 0,
-      "byteLength": 960, # TO DO
-      "byteOffset": 5760, # TO DO
+      "byteLength": 960, 
+      "byteOffset": 5760, 
       "target": 34962,
       "byteStride": 4
     },
@@ -297,13 +281,13 @@ class GLTF:
               "bufferView": 3,
               "byteOffset": 0, # indices
               "componentType": 5125, #5123 too small
-              "count": 360, # TO DO
+              "count": 360, 
               "type": "SCALAR",
               "min": [
                 0
               ],
               "max": [
-                239 # TO DO
+                239 
               ]
             })
 
@@ -315,8 +299,8 @@ class GLTF:
 
             self.json_data["bufferViews"].append(    {
               "buffer": 0,
-              "byteLength": 720, # TO DO
-              "byteOffset": 6720, # TO DO
+              "byteLength": 720, 
+              "byteOffset": 6720, 
               "target": 34963
             })
 
@@ -362,11 +346,6 @@ class GLB(GLTF):
 
     def __init__(self):
         super(GLB, self).__init__()
-
-        # three parts
-        # self.header = bytearray()
-        # self.json_chunk = bytearray()
-        # self.bin_chunk = bytearray()
 
 
     def _build_header(self, total_length):
@@ -460,42 +439,4 @@ class GLB(GLTF):
 
 if __name__ == "__main__":
 
-
-    # test dataset 1
-    # positions, normals, ids, indices = read_data("data/parent_pos_nor_id.json")
-
-    # # #-----------------------------------------------# test dataset2 start----------------------------------------------------------
-    # positions = [[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, -0.5, -0.5], [-0.5, -0.5, -0.5],
-    #             [-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5],
-    #             [-0.5, 0.5, -0.5], [-0.5, 0.5, 0.5], [0.5, 0.5, -0.5], [0.5, 0.5, 0.5],
-    #             [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5], [0.5, 0.5, -0.5], [-0.5, 0.5, -0.5],
-    #             [-0.5, -0.5, 0.5], [-0.5, 0.5, 0.5], [-0.5, 0.5, -0.5], [-0.5, -0.5, -0.5],
-    #             [0.5, -0.5, -0.5], [0.5, 0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, -0.5]]
-
-    # normals = [[0, -1, 0], [0, -1, 0], [0, -1, 0], [0, -1, 0], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 1, 0], [0, 1, 0], [0, 1, 0], [0, 1, 0], [0, 0, -1], [0, 0, -1], [0, 0, -1], [0, 0, -1], [-1, 0, 0], [-1, 0, 0], [-1, 0, 0], [-1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]]
-    # # [[0, -1, 0]] * 4 + [[0, 0, 1]] * 4 + [[0, 1, 0]] * 4 + [[0, 0, -1]] * 4 + [[-1, 0, 0]] * 4 + [[1, 0, 0]] * 4
-
-    # ids = [0] *24
-
-    # indices = [0, 3, 1, 3, 2, 1, 4, 6, 7, 4, 5, 6, 8, 9, 11, 8, 11, 10, 12, 14, 13, 12, 15, 14, 19, 16, 17, 19, 17, 18, 20, 21, 22, 20, 23, 21]
-    # # #-----------------------------------------------# test dataset2 end----------------------------------------------------------
-
-    # #------------------------------------------------test dataset3 for non-indexed start-----------------------------------------------------------
-    positions = [[0,0,0], [0,1,0], [1,1,0], [1,0,0]]
-    ids = [0]*4
-    normals = [[0, 1, 0]]*4
-    indices = [0, 1, 2, 2, 3, 0]
-    rgb = [1, 0.75, 0.8, 1]
-    # #------------------------------------------------test dataset3 end-----------------------------------------------------------
-
-
-    # Initialization and generate the glTF file
-    glb_generator = GLB()
-
-    glb_bytes = glb_generator.draw_glb(positions, normals, ids, indices, rgb)
-
-    glb_generator.export_gltf_file(positions, normals, ids, indices, rgb, "1125output.json")
-
-    write_path = "1125draw.glb"
-    with open(write_path, 'wb') as glb_f:
-      glb_f.write(glb_bytes)
+    pass

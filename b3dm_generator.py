@@ -1,5 +1,5 @@
 import struct
-from glb_generator import GLB, read_data
+from glb_generator import GLB
 import json
 
 
@@ -127,35 +127,8 @@ class B3DM:
         return b3dm
 
 
-# def read_glb(glb_file_path): 
-#     try:
-#         # Open the GLB file in binary mode
-#         with open(glb_file_path, 'rb') as glb_file:
-#             # Read the entire contents of the GLB file as bytes
-#             glb_bytes = glb_file.read()
-
-#         # Now, 'glb_bytes' contains the binary data of the GLB file
-#         # You can process, manipulate, or save these bytes as needed
-
-#         # For example, you can print the length of the byte data
-#         print(f"GLB file size: {len(glb_bytes)} bytes")
-#         # print(glb_bytes)
-
-#     except FileNotFoundError:
-#         print(f"GLB file not found at {glb_file_path}")
-#     except Exception as e:
-#         print(f"An error occurred: {str(e)}")
-
-#     return glb_bytes
-
-
-
-
 def glb_test():
 
-    # test dataset 1
-    positions, normals, ids, indices = read_data("data/parent_pos_nor_id.json")
-    
     # # test dataset 2
     # positions = [[-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, -0.5, -0.5], [-0.5, -0.5, -0.5],
     #         [-0.5, -0.5, 0.5], [0.5, -0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, 0.5, 0.5],
@@ -197,37 +170,6 @@ def glb_test():
 
 
 if __name__ == "__main__":
-    # Create an instance of the B3DM class
-    b3dm = B3DM()
-
-    # Set glb data
-    glbBytesData = glb_test()
-    # # glb_bytes = read_glb("data/parent.glb")
-
-    # # Set the Feature Table data
-    #json_data = {"BATCH_LENGTH":10}
-    json_data = {"BATCH_LENGTH":10,"RTC_CENTER":[1215019.2111447915,-4736339.477299974,4081627.9570209784]}
-    # Serialize the JSON data to a string
-    featureTableData = json.dumps(json_data, separators=(',', ':'))
-    # Encode the JSON string to bytes
-    # featureTableData = json_string.encode() #'utf-8'
-
-
-    # # Set the Batch Table data
-    #json_object = {"id": [0], "Longitude": [-1.31968]}
-    json_object = {"Longitude":[-1.31968,-1.3196832683949145,-1.3196637662080655,-1.3196656317210846,-1.319679266890895,-1.319693717777418,-1.3196607462778132,-1.3196940116311096,-1.319683648959897,-1.3196959060375169],"Latitude":[0.698874,0.6988615321420496,0.6988736012180136,0.6988863062831799,0.6988864387845588,0.6988814788613282,0.6988618972526105,0.6988590050687061,0.6988690935212543,0.6988854945986224],"Height":[78.1558019220829,85.41026367992163,78.10224648751318,78.74249991215765,78.86988856643438,82.70132680051029,78.16386888921261,84.22482559457421,84.54620283842087,79.63207503221929]}
-    #"id":[0,1,2,3,4,5,6,7,8,9]
-    # Serialize the JSON object to a JSON string
-    batchTableData = json.dumps(json_object, separators=(',', ':'))
-    # Encode the JSON string into bytes (UTF-8 encoding is used by default)
-    # batchTableData = json_string.encode()
-
     
-
-    # Write b3dm
-    output = b3dm.draw_b3dm(featureTableData, batchTableData, glbBytesData)
-    # output = b3dm.draw_b3dm(None, None, glbBytesData)
-
-    write_path = "test_b3dm/zoeyyy_test_table.b3dm"
-    with open(write_path, 'wb') as b3dm_f:
-            b3dm_f.write(output)
+    pass
+    

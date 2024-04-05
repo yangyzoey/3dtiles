@@ -23,7 +23,7 @@ def get_db():
     return g.db
 
 
-def create_app(dataset_theme):
+def create_app(theme):
     app = Flask(__name__)
 
     # Load JSON file
@@ -32,15 +32,36 @@ def create_app(dataset_theme):
 
     
     # Extract info
-    theme_data = data[dataset_theme]
+    theme_data = data[theme]
+    # object_input = "object_{}".format(theme) 
+    # face_input = "face_{}".format(theme) 
+
     attrib_object_str = theme_data['property']
-    attrib_object = json.loads(attrib_object_str.replace("'", "\"")) # Convert the string to a dictionary
+    # attrib_object = json.loads(attrib_object_str.replace("'", "\"")) # Convert the string to a dictionary
+    
+    keys = attrib_object_str
+    property_info = {}
+    for key in keys:
+        if key == 'height':
+            property_info[key] = 'float'
+        elif key == 'construction_year':
+            property_info[key] = 'int'
+        elif key == 'building_type':
+            property_info[key] = 'text'
+        elif key == 'city':
+            property_info[key] = 'text'
+        else:
+            pass
+    attrib_object = property_info
+
+
     sql_filter = theme_data['filter']
     index_flag = int(theme_data['index_flag']) 
     b3dm_flag = int(theme_data["b3dm_flag"])
     glb_flag = int(theme_data["glb_flag"])
+    custom_parameter = theme_data["custom_parameter"]
 
-    
+
     conn_params = config()
     app.config["postgreSQL_pool"] = pool.SimpleConnectionPool(
         1,
@@ -144,6 +165,12 @@ def create_app(dataset_theme):
         # print('json type', type(tileset_json))
         #------------------------------------------------------vw
 
+
+        #------------------------------------------------------dynamic 
+        # if custom_parameter != "":
+        #     tileset_json = dynamic_tileset(custom_parameter)
+        #------------------------------------------------------dynamic
+
         # write dictionary to file with indentation
         data = tileset_json
         write_path = "WEBtest_b3dm/{}.json".format('tileset')
@@ -188,7 +215,7 @@ def create_app(dataset_theme):
             featureTableData, batchTableData = fetch_featureTable_batchTable(conn, cursor, tile_id, sql_filter, attrib_object)
 
             sql = "SELECT glb from hierarchy where temp_tid = {0} and level =2".format(tile_id)
-            sql = "SELECT glb from vw_content where tid = {0}".format(tile_id)
+            #sql = "SELECT glb from vw_content where tid = {0}".format(tile_id)
             cursor.execute(sql)
             results = cursor.fetchall()
             glbBytesData = results[0][0]
@@ -210,7 +237,7 @@ def create_app(dataset_theme):
         # # ----------------------Approach III: fetch precomposed b3dm from DB start-------------------------------------
         elif b3dm_flag == 1:
             sql = "SELECT b3dm from hierarchy where temp_tid = {0} and level =2".format(tile_id)
-            sql = "SELECT b3dm from vw_content where tid = {0}".format(tile_id)
+            #sql = "SELECT b3dm from vw_content where tid = {0}".format(tile_id)
             cursor.execute(sql)
             results = cursor.fetchall()
             b3dm_bytes = results[0][0]
@@ -272,6 +299,65 @@ def read_glb(glb_file_path): # can also read b3dm
     return glb_bytes
 
 
+def dynamic_tileset(custom_parameter):
+    # Structure the fetched data into tileset
+    tileset_json = {
+        "asset": 
+            {
+            "version": "1.0",
+            "tilesetVersion": "1.2.3"
+            }
+        ,
+        "properties":
+            # tileset_data[2]
+            {
+            "Height": {}
+            }
+        , 
+        "geometricError": float(tile_data[0][2]), 
+        "root": {
+            "boundingVolume": {
+                "box": [float(pt) for pt in tile_data[0][3]] #[float(pt) for pt in tileset_data[4]]  
+            },
+            "geometricError": float(tile_data[0][4]), 
+            "refine": tile_data[0][5],
+            "content": {
+                "boundingVolume": {
+                "box": [float(pt) for pt in tile_data[0][3]]  
+            }
+            },
+            "children": []
+        }
+    }
+
+    # Check if tile_data[0][6] is not null
+    if tile_data[0][6] is not None:
+        tileset_json["root"]["content"]["uri"] = url_for('tiles_one_tile', tile_name = tile_data[0][0]) 
+    # Add child to the root
+    for child_data in children_data:
+        child_tile = {
+            "boundingVolume": {
+                "box": [float(pt) for pt in child_data[3]] 
+            },
+            "geometricError": float(child_data[4]), 
+            "content": {
+                "uri":  url_for('tiles_one_tile', tile_name = child_data[0]) #url_for('tiles_one_tile')
+            }
+        }
+        tileset_json["root"]["children"].append(child_tile)
+    #     print(child_tile, "\n")
+    formatted_json = json.dumps(tileset_json, indent=4)
+    print("tileset_json: \n", formatted_json, "\n")
+    # print("tileset_json type: ", type(tileset_json))
+    # write json file
+    # output = formatted_json
+    # write_path = "test_b3dm/{}.json".format('tileset')
+    # with open(write_path, "w") as json_file:
+    #     json.dump(output, json_file)
+
+    return tileset_json
+
+
 def read_data(file_path): 
 
     # Open the JSON file in read mode # 'rb' "read binary"
@@ -293,28 +379,49 @@ if __name__ == "__main__":
     import time
 
     # specfy the dataset theme 
-    dataset_theme = "10_282_562" #"primitive" # "9_284_556" #"cube"  #"37en2" # # "37en1"  # "37en2" # "campus_lod1"
-
+    theme = "9_284_556"
+    # "9_284_556"  # Aula
+    #"Campus"
+    # "BK"
+    # "Delft_NE"
+    # "Delft"
+     # "Delft_NW"
+    #"9_276_560" 
+    #"10_282_562" 
+    #"primitive" 
+    
     #----------------------------------------------3D Tiles database------------------------------------------
-
+    # Load JSON file
+    with open('input.json', 'r') as file:
+        data = json.load(file)
+    # Extract info
+    theme_data = data[theme]
+    creator_flag = theme_data["mode"]
 
     # total time start
     total_start_time = time.time()
-    
-    tiles_creator(dataset_theme)
+    print("3D Tiles created of theme {0}".format(theme))
+
+
+    if creator_flag == 1:
+        print("creator and server is called")
+        tiles_creator(theme)
+    else:
+        print("server is called")
+
 
     # total time end
     total_end_time = time.time()
     execution_time = total_end_time - total_start_time
-    print(f"Total execution time: {execution_time} seconds")
+    print(f"Creator: Total execution time: {execution_time} seconds")
     #----------------------------------------------3D Tiles database------------------------------------------
 
     start_time = time.time()
 
-    app = create_app(dataset_theme)
+    app = create_app(theme)
     app.run(debug=False) #debug=True
 
     end_time = time.time()
     execution_time = end_time - start_time
 
-    print(f"Total execution time: {execution_time} seconds")
+    print(f"Server: Total execution time: {execution_time} seconds")

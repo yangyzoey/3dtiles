@@ -50,15 +50,16 @@ const viewModel = {
 };
 
 /*
-//加载地图
-//获取默认情况下图层数组容器，默认length=1 或者 viewer.scene.imageryLayers
+//load map
+//viewer.scene.imageryLayers (or array containers, by default length=1)
 var layers = viewer.imageryLayers._layers;
 
-//将第一个影像图层设置为隐藏 下标0
+//hide first image layer 
 viewer.scene.imageryLayers.get(0).show = true; //false;
 
-//隐藏了唯一的一个影像图层，地球变成一个蓝色的圆球
-//可以通过下面的命令将无图层服务的蓝色圆球变成WHITE or BLACK
+
+//The only image layer is hidden, and the earth becomes a blue ball.
+//turn the blue ball without layer service into WHITE or BLACK
 //viewer.scene.globe.baseColor = Cesium.Color.BLACK;
 */
 
@@ -101,9 +102,9 @@ Cesium.knockout
       viewer.scene.primitives.add(tileset);
 
 /*
-//设置数据位置和方向
-//根据经纬度生成transform
-//给到数据的root.transform
+//Set position and direction
+//Generate transform based on longitude and latitude
+//root.transform 
 
     tileset.readyPromise.then(function(){
     var longitude = 2.254825261091031;
@@ -112,7 +113,7 @@ Cesium.knockout
     var cartesian = Cesium.Cartesian3.fromDegrees(longitude, latitude, height);
     var transform = Cesium.Transforms.eastNorthUpToFixedFrame(cartesian);
     
-    tileset._root.transform = transform; //根节点变换矩阵 //Cesium.Matrix4.IDENTITY;
+    tileset._root.transform = transform;  //Cesium.Matrix4.IDENTITY;
     //tileset.modelMatrix = transform; 
 });
 */
@@ -128,7 +129,7 @@ Cesium.knockout
         )
       );
 
-      ///*
+     // /*
       const properties = tileset.properties;
       if (
         Cesium.defined(properties) &&
@@ -148,7 +149,7 @@ Cesium.knockout
           },
         });
       }
-      //*/
+     // */
 
 
 

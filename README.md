@@ -44,7 +44,7 @@ Set up python environment (See requirements.txt)
 $ python server.py
 ```
 
-Now connect with a webbrowser to the service running on your own laptop: http://127.0.0.1:5000
+Now connect with a web browser to the service running on your own laptop: http://127.0.0.1:5000
 
 #### Additional Notes:
 Feel free to customise configuration for the application.
