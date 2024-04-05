@@ -1,0 +1,54 @@
+{
+    "9_284_556": {
+        "description": "This is for test, around TU Delft Aula",
+        "lod": "lod12_3d",
+        "lod_description": "lod12_2d,lod12_3d,lod22_3d",
+        "mode": 1,
+        "mode_desciption": {"1": "server and creator", "0":"server"},
+        "cluster_number": [1,1],
+        "triangulation_flag": "tesselation",
+        "index_flag": 0,
+        "index_flag_description": {"0": "non-indexed", "1": "indexed"},
+        "b3dm_flag": 1,
+        "glb_flag": 1,
+        "b3dm/glb_flag_description": {"1": "composed", "-1": "no composed"},  
+        "property": ["height"], 
+        "filter": "",
+        "custom_parameter": ""
+    },
+    "BK": {
+        "description": "This is for test, around TU Delft Aula",
+        "lod": "lod12_3d",
+        "lod_description": "lod12_2d,lod12_3d,lod22_3d",
+        "mode": 1,
+        "mode_desciption": {"1": "server and creator", "0":"server"},
+        "cluster_number": [1,1],
+        "triangulation_flag": "tesselation",
+        "index_flag": 0,
+        "index_flag_description": {"0": "non-indexed", "1": "indexed"},
+        "b3dm_flag": 1,
+        "glb_flag": 1,
+        "b3dm/glb_flag_description": {"1": "composed", "-1": "no composed"},  
+        "property": ["height", "construction_year", "building_type", "city"], 
+        "filter": "",
+        "custom_parameter": ""
+    },
+    "Campus": {
+        "description": "This is for test, around TU Delft Aula",
+        "lod": "lod12_3d",
+        "lod_description": "lod12_2d,lod12_3d,lod22_3d",
+        "mode": 1,
+        "mode_desciption": {"1": "server and creator", "0":"server"},
+        "cluster_number": [1,1],
+        "triangulation_flag": "tesselation",
+        "index_flag": 0,
+        "index_flag_description": {"0": "non-indexed", "1": "indexed"},
+        "b3dm_flag": 1,
+        "glb_flag": 1,
+        "b3dm/glb_flag_description": {"1": "composed", "-1": "no composed"},  
+        "property": ["height", "construction_year"], 
+        "filter": "",
+        "custom_parameter": ""
+    }
+   
+}
