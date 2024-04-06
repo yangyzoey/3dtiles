@@ -299,7 +299,7 @@ def compose_gltf(conn, cursor, tile_id, oid_list, nodes_values, index_flag):
     rgb = colors[tile_id]
     print("  tile No.{}".format(tile_id))
     print("  rgb: ".format(tile_id), rgb)
-    print("\n")
+    # print("\n")
 
 
     # Set glb data

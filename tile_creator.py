@@ -400,6 +400,29 @@ def tiles_creator(theme):
 
     tid_list= [int(i[0]) for i in results]
     # print(tid_list)
+
+
+    # ---------------------------------------------pre-composed gltf time-------------------
+    # full pre-composed b3dm in DB
+    print("\nPre-composed gltf stored in DB start")
+    start_time = time.time()
+
+    if glb_flag == -1:
+        print("No pre-composed binary gltf")
+    else:
+        print("Write to DB, {0}".format(["composed non-indexed binary gltf", "composed indexed binary gltf"][index_flag]))
+        cursor.execute("ALTER TABLE hierarchy ADD COLUMN glb BYTEA;")
+        for tid in tid_list:
+            write_glb(conn, cursor, tid, index_flag, sql_filter)
+
+    end_time = time.time()
+    execution_time = end_time - start_time
+    print(f"Pre-composed gltf stored in DB end, execution time: {execution_time} seconds\n")
+    # ---------------------------------------------pre-composed gltf time---------------------
+
+
+
+
     # ---------------------------------------------fully pre-composed b3dm time-------------------
     # full pre-composed b3dm in DB
     print("\nPre-composed b3dm stored in DB start")
@@ -421,24 +444,7 @@ def tiles_creator(theme):
     # ---------------------------------------------fully pre-composed b3dm time---------------------
 
 
-    # ---------------------------------------------pre-composed gltf time-------------------
-    # full pre-composed b3dm in DB
-    print("\nPre-composed gltf stored in DB start")
-    start_time = time.time()
-
-    if glb_flag == -1:
-        print("No pre-composed binary gltf")
-    else:
-        print("Write to DB, {0}".format(["composed non-indexed binary gltf", "composed indexed binary gltf"][index_flag]))
-        cursor.execute("ALTER TABLE hierarchy ADD COLUMN glb BYTEA;")
-        for tid in tid_list:
-            write_glb(conn, cursor, tid, index_flag, sql_filter)
-
-    end_time = time.time()
-    execution_time = end_time - start_time
-    print(f"Pre-composed gltf stored in DB end, execution time: {execution_time} seconds\n")
-    # ---------------------------------------------pre-composed gltf time---------------------
-
+ 
 
     # # ----------------------------------------------create vw_content from hierarchy start-------------------------------------------------
     # print("\nStore in view content start")

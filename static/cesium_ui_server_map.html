@@ -49,20 +49,9 @@ const viewModel = {
   shadows: true,
 };
 
-/*
-//load map
-//viewer.scene.imageryLayers (or array containers, by default length=1)
+
 var layers = viewer.imageryLayers._layers;
-
-//hide first image layer 
 viewer.scene.imageryLayers.get(0).show = true; //false;
-
-
-//The only image layer is hidden, and the earth becomes a blue ball.
-//turn the blue ball without layer service into WHITE or BLACK
-//viewer.scene.globe.baseColor = Cesium.Color.BLACK;
-*/
-
 
 Cesium.knockout.track(viewModel);
 
@@ -98,27 +87,9 @@ Cesium.knockout
         return;
       }
   
-
       viewer.scene.primitives.add(tileset);
 
-/*
-//Set position and direction
-//Generate transform based on longitude and latitude
-//root.transform 
-
-    tileset.readyPromise.then(function(){
-    var longitude = 2.254825261091031;
-    var latitude = 0.6138864903996801;
-    var height = 0.0;
-    var cartesian = Cesium.Cartesian3.fromDegrees(longitude, latitude, height);
-    var transform = Cesium.Transforms.eastNorthUpToFixedFrame(cartesian);
-    
-    tileset._root.transform = transform;  //Cesium.Matrix4.IDENTITY;
-    //tileset.modelMatrix = transform; 
-});
-*/
-
-        //the camera's heading, pitch, and range
+      //the camera's heading, pitch, and range
       inspectorViewModel.tileset = tileset;
       viewer.zoomTo(
         tileset,
@@ -130,7 +101,7 @@ Cesium.knockout
       );
 
      // /*
-      const properties = tileset.properties;
+     const properties = tileset.properties;
       if (
         Cesium.defined(properties) &&
         Cesium.defined(properties.Height)
@@ -150,7 +121,6 @@ Cesium.knockout
         });
       }
      // */
-
 
 
     } catch (error) {

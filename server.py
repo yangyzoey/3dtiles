@@ -379,7 +379,7 @@ if __name__ == "__main__":
     import time
 
     # specfy the dataset theme 
-    theme = "9_284_556"
+    theme = "BK"
     # "9_284_556"  # Aula
     #"Campus"
     # "BK"
