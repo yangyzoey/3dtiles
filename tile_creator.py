@@ -495,19 +495,28 @@ def tiles_creator(theme):
     start_time = time.time()
 
     sql_vw_tileset ="""
-        CREATE OR REPLACE FUNCTION create_vw_tileset() RETURNS VOID AS $$
+    CREATE OR REPLACE FUNCTION create_vw_tileset() RETURNS VOID AS $$
     BEGIN
-	
         -- Drop the existing view if it exists
         EXECUTE 'DROP VIEW IF EXISTS vw_tileset;';
-		
-		
-		EXECUTE 'DROP VIEW IF EXISTS vw_tile CASCADE';
-		
-		-- Create iew vw_tile
+	     
+        -- Create the view vw_tileset
         EXECUTE '
-        CREATE VIEW vw_tile AS
-        WITH e AS (
+            CREATE VIEW vw_tileset AS
+            WITH property AS (
+                SELECT json_object_agg(initcap(properties), json_build_object()) AS property_json
+                FROM (
+                    SELECT column_name AS properties
+                    FROM information_schema.columns
+                    WHERE table_name = ''property''
+                    ORDER BY ordinal_position
+                    OFFSET 2
+                ) AS property_data
+            ),
+		tile
+		AS (
+		WITH 
+        e AS (
         SELECT ST_3DExtent(envelope) AS envelope FROM hierarchy WHERE level = 2
     )
         SELECT
@@ -562,22 +571,7 @@ def tiles_creator(theme):
             h.temp_tid AS content
         FROM hierarchy h, e 
         WHERE h.level = 2
-        ';
-
-     
-        -- Create the view vw_tileset
-        EXECUTE '
-            CREATE VIEW vw_tileset AS
-            WITH property AS (
-                SELECT json_object_agg(initcap(properties), json_build_object()) AS property_json
-                FROM (
-                    SELECT column_name AS properties
-                    FROM information_schema.columns
-                    WHERE table_name = ''property''
-                    ORDER BY ordinal_position
-                    OFFSET 2
-                ) AS property_data
-            ),
+		),
 			
 			children AS (
                 SELECT
@@ -592,7 +586,7 @@ def tiles_creator(theme):
 				
 					(
 					SELECT *
-					FROM vw_tile
+					FROM tile
 					WHERE tileset_id = 1 --AND tile_data.parent_id IS NOT NULL
 					 --AND tile_data.parent_id IS NOT NULL
 					ORDER BY id -- Order by tile_id
@@ -627,7 +621,7 @@ def tiles_creator(theme):
                 ) AS tileset_json  
             FROM (
                 SELECT *
-                FROM vw_tile
+                FROM tile
                 WHERE tileset_id = 1 AND parent_id IS NULL
             ) AS tile_data
             ,property
