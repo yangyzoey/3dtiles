@@ -1243,7 +1243,7 @@ def k_means(conn, cursor, cnum1, cnum2):
         object_id INTEGER, -- Assuming this column references the object's unique identifier
         level INTEGER, -- Level of clustering (e.g., 0 for initial clustering, 1 for sub-clustering, 2 for sub-sub-clustering)
         cluster_id INTEGER, -- Cluster ID at this level
-        parent_cluster_id INTEGER, -- Cluster ID at the previous level (for hierarchy)
+        parent_cluster_id INTEGER, -- Cluster ID at the previous level
         name TEXT --unique name for all clusters
     );
 
@@ -1271,8 +1271,7 @@ def k_means(conn, cursor, cnum1, cnum2):
     ) level_1_clusters;
 
     DROP TABLE IF EXISTS hierarchy CASCADE;
-    --DETAIL:  view vw_tile depends on table hierarchy
-    --HINT:  Use DROP .. CASCADE to    delete dependent objects altogether
+    --DETAIL:  view vw_tileset depends on table hierarchy
 
     CREATE TABLE hierarchy (
     hid SERIAL PRIMARY KEY,
