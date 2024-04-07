@@ -35,7 +35,7 @@ Download Cesium-1.110.zip from https://github.com/CesiumGS/cesium/releases/tag/1
 
 Set up python environment (See requirements.txt)
 
-#### Serve the 3D Tile on-the-fly
+#### Serve the 3D Tiles on-the-fly
 - Perform a coordinate transformation from EPSG:7415 (RD+NAP) to EPSG:4978, and harmonise geometries to valid polygonz. 
 - Compute and prepare 3D Tiles information (normal, position, triangulated topology, and tileset structure) 
 - Run the webservice and complete the tile creation. Then visualise on Cesium.
